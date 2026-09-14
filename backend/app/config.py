@@ -1,0 +1,44 @@
+import os
+from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "AI-Based Multilingual Mass Communication Platform"
+    API_V1_STR: str = "/api/v1"
+    
+    # Database configuration
+    DATABASE_URL: str = "mysql+pymysql://root:root@localhost:3306/mass_comm_db"
+    USE_SQLITE_FALLBACK: bool = True
+    SQLITE_URL: str = f"sqlite:///{BASE_DIR / 'mass_comm_dev.db'}"
+
+    # Free AI Provider options: 'gemini' | 'groq'
+    AI_PROVIDER: str = "gemini"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.6-flash"
+    
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
+    # Step 2: Translation Service Settings (Bhashini / IndicTrans2)
+    TRANSLATION_PROVIDER: str = "auto"  # 'auto', 'bhashini', 'indictrans2', 'gemini', 'groq'
+    BHASHINI_USER_ID: str = ""
+    BHASHINI_API_KEY: str = ""
+    BHASHINI_INFERENCE_API_KEY: str = ""
+    BHASHINI_PIPELINE_ID: str = ""
+    HUGGINGFACE_API_KEY: str = ""
+
+    # Step 5: LanguageTool Grammar Check
+    # Default: free public API. Override with local Docker: http://localhost:8010/v2/check
+    LANGUAGETOOL_URL: str = "https://api.languagetool.org/v2/check"
+
+    model_config = SettingsConfigDict(
+        env_file=str(BASE_DIR / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+
+settings = Settings()
