@@ -435,3 +435,19 @@ INSERT INTO `content_library` (`id`, `title`, `description`, `category`, `conten
 (1, 'Dengue Vector Control Guidelines', 'Verified medical advisory on controlling mosquito breeding during monsoon', 'Public Health', 'TEXT', 'Empty flower pots, clean water coolers weekly, apply mosquito repellents, and consult a doctor immediately if high fever persists.', 1, '["health", "dengue", "prevention"]', 'ACTIVE', 1),
 (2, 'ಡೆಂಗ್ಯೂ ತಡೆಗಟ್ಟುವಿಕೆ ಮಾರ್ಗಸೂಚಿಗಳು', 'ಡೆಂಗ್ಯೂ ರೋಗ ನಿಯಂತ್ರಣಕ್ಕಾಗಿ ಸರ್ಕಾರಿ ಮಾರ್ಗಸೂಚಿ', 'Public Health', 'TEXT', 'ನಿಮ್ಮ ಸುತ್ತಮುತ್ತಲಿನ ಪರಿಸರದಲ್ಲಿ ನೀರು ನಿಲ್ಲದಂತೆ ನೋಡಿಕೊಳ್ಳಿ. ವಾರಕ್ಕೊಮ್ಮೆ ನೀರಿನ ತೊಟ್ಟಿಗಳನ್ನು ಸ್ವಚ್ಛಗೊಳಿಸಿ.', 3, '["ಆರೋಗ್ಯ", "ಡೆಂಗ್ಯೂ"]', 'ACTIVE', 1)
 ON DUPLICATE KEY UPDATE `title`=VALUES(`title`);
+
+
+CREATE TABLE content_quality_reports (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    campaign_content_id BIGINT NOT NULL,
+    sentiment VARCHAR(20),          -- POSITIVE / NEUTRAL / NEGATIVE
+    tone VARCHAR(50),
+    clarity_score INT,
+    grammar_ok BOOLEAN,
+    factual_ok BOOLEAN,
+    compliance_ok BOOLEAN,
+    overall_score INT,
+    status ENUM('APPROVED','REJECTED') DEFAULT 'APPROVED',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_qr_content FOREIGN KEY (campaign_content_id) REFERENCES campaign_contents(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
