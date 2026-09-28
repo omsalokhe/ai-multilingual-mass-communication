@@ -12,6 +12,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.audiences import router as audiences_router
 from app.api.channels import router as channels_router
 from app.api.analytics import router as analytics_router
+from app.api.auth import router as auth_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn")
@@ -70,6 +71,7 @@ app.include_router(dashboard_router)
 app.include_router(audiences_router)
 app.include_router(channels_router)
 app.include_router(analytics_router)
+app.include_router(auth_router)
 
 
 @app.get("/", tags=["Health & Status"])

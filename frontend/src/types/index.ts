@@ -451,3 +451,37 @@ export interface AnalyticsOverview {
   total_campaigns: number;
   total_contents: number;
 }
+
+// ──────────────────────────────────────────────
+// Authentication types
+// ──────────────────────────────────────────────
+
+export interface AuthUser {
+  id: number;
+  full_name: string;
+  email: string;
+  phone?: string | null;
+  role: string;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface RegisterPayload {
+  full_name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  role_name?: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  user: AuthUser;
+}

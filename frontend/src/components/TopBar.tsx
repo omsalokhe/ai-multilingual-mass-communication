@@ -1,6 +1,7 @@
 import { Search, Bell, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAppSettings } from "../context/AppSettingsContext";
+import { useAuth } from "../context/AuthContext";
 
 export interface TopBarProps {
   title?: string;
@@ -10,6 +11,7 @@ export interface TopBarProps {
 
 export default function TopBar({ title: _title, crumbs, children }: TopBarProps) {
   const { profile } = useAppSettings();
+  const { user } = useAuth();
 
   return (
     <header className="bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between gap-4 shrink-0">
@@ -54,12 +56,12 @@ export default function TopBar({ title: _title, crumbs, children }: TopBarProps)
 
         {/* User avatar */}
         <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-            {profile.avatarInitials}
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+            {user?.full_name ? user.full_name.substring(0, 2).toUpperCase() : profile.avatarInitials}
           </div>
           <div className="hidden sm:flex flex-col">
-            <span className="text-xs font-semibold text-slate-700">{profile.fullName}</span>
-            <span className="text-[10px] text-slate-400">{profile.role}</span>
+            <span className="text-xs font-semibold text-slate-700">{user?.full_name || profile.fullName}</span>
+            <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{user?.role || profile.role}</span>
           </div>
         </div>
       </div>

@@ -17,8 +17,11 @@ from app.models.recipient import (
     CommunicationTemplate,
 )
 from app.models.delivery import DeliveryLog
+from app.models.admin import Role, Admin
 
 __all__ = [
+    "Role",
+    "Admin",
     "CampaignType",
     "AudienceSegment",
     "Campaign",

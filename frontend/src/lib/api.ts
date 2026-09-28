@@ -26,12 +26,43 @@ import type {
   DispatchCampaignRequest,
   DispatchCampaignResponse,
   AnalyticsOverview,
+  AuthUser,
+  LoginPayload,
+  RegisterPayload,
+  AuthResponse,
 } from "../types";
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
   headers: { "Content-Type": "application/json" },
 });
+
+// Attach Bearer token to all requests if present
+client.interceptors.request.use((config) => {
+  const token = localStorage.getItem("mass_comm_token");
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Auto-handle 401 Unauthorized responses
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const isAuthRoute = error.config?.url?.includes("/auth/login") || error.config?.url?.includes("/auth/register");
+      if (!isAuthRoute) {
+        localStorage.removeItem("mass_comm_token");
+        localStorage.removeItem("mass_comm_user");
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // ── Health ────────────────────────────────────
 export async function checkHealth(): Promise<{ status: string }> {
@@ -213,4 +244,29 @@ export async function dispatchCampaign(
 export async function getAnalytics(days = 7): Promise<AnalyticsOverview> {
   const { data } = await client.get<AnalyticsOverview>(`/analytics/overview?days=${days}`);
   return data;
+}
+
+// ── Authentication ────────────────────────────
+export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
+  const { data } = await client.post<AuthResponse>("/auth/login", payload);
+  return data;
+}
+
+export async function registerUser(payload: RegisterPayload): Promise<AuthResponse> {
+  const { data } = await client.post<AuthResponse>("/auth/register", payload);
+  return data;
+}
+
+export async function getCurrentUser(): Promise<AuthUser> {
+  const { data } = await client.get<AuthUser>("/auth/me");
+  return data;
+}
+
+export async function logoutUser(): Promise<{ success: boolean }> {
+  try {
+    const { data } = await client.post<{ success: boolean }>("/auth/logout");
+    return data;
+  } catch {
+    return { success: true };
+  }
 }

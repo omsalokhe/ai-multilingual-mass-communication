@@ -14,6 +14,8 @@ from app.models.recipient import (
     AudienceSegmentMember,
     CommunicationTemplate
 )
+from app.models.admin import Role, Admin
+from app.services.security import hash_password
 from app.schemas.campaign import (
     GenerateContentRequest,
     GenerateContentResponse,
@@ -338,6 +340,32 @@ def get_campaign(id: int, db: Session = Depends(get_db)):
     description="Seeds default languages, campaign types, sample audience, and a sample Dengue campaign for testing."
 )
 def seed_sample_data(db: Session = Depends(get_db)):
+    # 0. Roles & Default Admin Account
+    role_admin = db.query(Role).filter(Role.role_name == "SUPER_ADMIN").first()
+    if not role_admin:
+        role_admin = Role(role_name="SUPER_ADMIN", description="Full system administrator access")
+        db.add(role_admin)
+        db.flush()
+    if not db.query(Role).filter(Role.role_name == "ADMIN").first():
+        db.add(Role(role_name="ADMIN", description="Standard administrator"))
+    if not db.query(Role).filter(Role.role_name == "CAMPAIGN_MANAGER").first():
+        db.add(Role(role_name="CAMPAIGN_MANAGER", description="Can create and manage communication campaigns"))
+    if not db.query(Role).filter(Role.role_name == "COMMUNICATION_TEAM").first():
+        db.add(Role(role_name="COMMUNICATION_TEAM", description="Can draft and review multilingual content"))
+    db.flush()
+
+    admin_user = db.query(Admin).filter(Admin.email == "admin@connectai.org").first()
+    if not admin_user:
+        admin_user = Admin(
+            role_id=role_admin.id,
+            full_name="System Administrator",
+            email="admin@connectai.org",
+            password_hash=hash_password("admin123"),
+            phone="+919876543210",
+            is_active=True
+        )
+        db.add(admin_user)
+
     # 1. Languages
     languages_data = [
         {"id": 1, "name": "English", "code": "en", "native_name": "English"},

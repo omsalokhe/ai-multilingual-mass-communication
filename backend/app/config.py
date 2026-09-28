@@ -9,6 +9,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "AI-Based Multilingual Mass Communication Platform"
     API_V1_STR: str = "/api/v1"
     
+    # JWT Authentication Settings
+    JWT_SECRET_KEY: str = "7d4a2e58c9b13f06a84d72e915cbfa3068e214d59a7f3e820b6154c8d9e23f01"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
+
     # Database configuration
     DATABASE_URL: str = "mysql+pymysql://root:root@localhost:3306/mass_comm_db"
     USE_SQLITE_FALLBACK: bool = True

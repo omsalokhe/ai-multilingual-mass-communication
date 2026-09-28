@@ -13,7 +13,9 @@ import {
   Menu,
   X,
   Zap,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
   { to: "/", icon: LayoutDashboard, key: "nav_dashboard", fallback: "Dashboard" },
@@ -30,6 +32,7 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { profile, t } = useAppSettings();
+  const { user, logout } = useAuth();
 
   const isActive = (to: string) => {
     if (to === "/") return location.pathname === "/";
@@ -100,17 +103,28 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        {/* User area */}
-        <div className="px-4 py-4 border-t border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-              {profile.avatarInitials}
+        {/* User area & Logout */}
+        <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
+              {user?.full_name ? user.full_name.substring(0, 2).toUpperCase() : profile.avatarInitials}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-slate-700 truncate">{profile.fullName}</span>
-              <span className="text-[10px] text-slate-400 truncate">{profile.role}</span>
+              <span className="text-xs font-semibold text-slate-800 truncate">
+                {user?.full_name || profile.fullName}
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium truncate uppercase tracking-wider">
+                {user?.role || profile.role}
+              </span>
             </div>
           </div>
+          <button
+            onClick={logout}
+            title="Sign out"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </aside>
     </>
