@@ -16,6 +16,7 @@ from app.models.recipient import (
     AudienceSegmentMember,
     CommunicationTemplate,
 )
+from app.models.delivery import DeliveryLog
 
 __all__ = [
     "CampaignType",
@@ -30,4 +31,5 @@ __all__ = [
     "Recipient",
     "AudienceSegmentMember",
     "CommunicationTemplate",
+    "DeliveryLog",
 ]

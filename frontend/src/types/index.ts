@@ -40,6 +40,29 @@ export interface CampaignDetail {
 }
 
 // ──────────────────────────────────────────────
+// Create Campaign
+// ──────────────────────────────────────────────
+
+export interface CreateCampaignRequest {
+  name: string;
+  description?: string;
+  campaign_type_id: number;
+  objective?: string;
+  priority?: string;
+  segment_ids?: number[];
+  channel?: string;
+}
+
+export interface CreateCampaignResponse {
+  success: boolean;
+  campaign_id: number;
+  campaign_code: string;
+  name: string;
+  status: string;
+  message: string;
+}
+
+// ──────────────────────────────────────────────
 // Step 1 — Generate Content
 // ──────────────────────────────────────────────
 
@@ -216,4 +239,215 @@ export interface QualityCheckResponse {
   total_checked: number;
   reports: QualityReport[];
   summary: Record<string, unknown>;
+}
+
+// ──────────────────────────────────────────────
+// Standalone AI Generation
+// ──────────────────────────────────────────────
+
+export interface AIGenerateRequest {
+  topic: string;
+  tone?: string;
+  channel?: string;
+  language?: string;
+  max_characters?: number;
+  guidance?: string;
+  provider?: string;
+}
+
+export interface AIGenerateResponse {
+  success: boolean;
+  generated_text: string;
+  language: string;
+  provider_used: string;
+  model_used: string;
+  character_count: number;
+  was_translated: boolean;
+  original_english_text?: string;
+}
+
+// ──────────────────────────────────────────────
+// Dashboard
+// ──────────────────────────────────────────────
+
+export interface DashboardStats {
+  total_campaigns: number;
+  total_recipients: number;
+  total_segments: number;
+  total_contents: number;
+  total_languages: number;
+  campaigns_by_status: Record<string, number>;
+  campaigns_by_priority: Record<string, number>;
+  recent_campaigns: {
+    id: number;
+    name: string;
+    campaign_code: string;
+    status: string;
+    priority: string;
+    campaign_type: string;
+    target_audiences: string[];
+    content_count: number;
+    created_at: string;
+  }[];
+  audience_segments: {
+    id: number;
+    name: string;
+    description: string;
+    member_count: number;
+    status: string;
+  }[];
+  languages: {
+    id: number;
+    name: string;
+    code: string;
+    native_name: string;
+  }[];
+}
+
+// ──────────────────────────────────────────────
+// Audiences & Recipients
+// ──────────────────────────────────────────────
+
+export interface SegmentBrief {
+  id: number;
+  name: string;
+  description?: string;
+  member_count: number;
+  status: string;
+  created_at?: string;
+}
+
+export interface RecipientBrief {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  email?: string;
+  phone_number?: string;
+  city?: string;
+  occupation?: string;
+  organization?: string;
+  preferred_language?: string;
+  status: string;
+}
+
+// ──────────────────────────────────────────────
+// Channels & Dispatching
+// ──────────────────────────────────────────────
+
+export interface ChannelStatusItem {
+  name: string;
+  channel: "EMAIL" | "SMS" | "WHATSAPP";
+  status: string;
+  protocol: string;
+  success_rate: string;
+  dispatched_count: number;
+  description: string;
+}
+
+export interface ChannelStatusResponse {
+  channels: ChannelStatusItem[];
+  total_dispatched: number;
+}
+
+export interface DispatchHistoryItem {
+  id: number;
+  campaign_id?: number | null;
+  campaign_name: string;
+  channel: "EMAIL" | "SMS" | "WHATSAPP";
+  recipient_name: string;
+  recipient_contact: string;
+  language: string;
+  subject?: string;
+  message_preview: string;
+  status: string;
+  gateway_message_id?: string;
+  details?: string;
+  sent_at: string;
+}
+
+export interface SendTestRequest {
+  channel: string;
+  recipient: string;
+  subject?: string;
+  message: string;
+  language?: string;
+}
+
+export interface SendTestResponse {
+  success: boolean;
+  channel: string;
+  recipient: string;
+  message_id: string;
+  status: string;
+  provider: string;
+  details: string;
+  log_id?: number;
+  timestamp: string;
+  whatsapp_url?: string;
+  sms_url?: string;
+  mailto_url?: string;
+}
+
+export interface DispatchCampaignRequest {
+  campaign_id: number;
+  channels: string[];
+  language_code?: string;
+  custom_message?: string;
+  recipient_ids?: number[];
+}
+
+export interface DispatchCampaignDeliveryReceipt {
+  channel: string;
+  recipient_name: string;
+  recipient_contact: string;
+  message_id: string;
+  status: string;
+  timestamp: string;
+}
+
+export interface DispatchCampaignResponse {
+  success: boolean;
+  campaign_id: number;
+  campaign_code: string;
+  campaign_name: string;
+  campaign_status: string;
+  total_recipients: number;
+  channels_used: string[];
+  total_dispatched: number;
+  channel_stats: Record<string, { sent: number; failed: number }>;
+  deliveries: DispatchCampaignDeliveryReceipt[];
+}
+
+// ──────────────────────────────────────────────
+// Analytics Overview
+// ──────────────────────────────────────────────
+
+export interface AnalyticsChannelMetric {
+  label: string;
+  value: number;
+  color: string;
+  percentage: number;
+}
+
+export interface AnalyticsLanguageMetric {
+  language: string;
+  reach: number;
+  percentage: number;
+  color: string;
+}
+
+export interface AnalyticsOverview {
+  total_delivered: number;
+  open_rate: number;
+  click_through_rate: number;
+  engagement_rate: number;
+  engagement_trend_labels: string[];
+  engagement_trend_data: number[];
+  channel_performance: AnalyticsChannelMetric[];
+  language_reach: AnalyticsLanguageMetric[];
+  audience_active_percent: number;
+  audience_inactive_percent: number;
+  audience_total: number;
+  total_campaigns: number;
+  total_contents: number;
 }

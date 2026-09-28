@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: multilingual-comm-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: USE_SQLITE_FALLBACK
+        value: "true"
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: TRANSLATION_PROVIDER
+        value: indictrans2
+      - key: LANGUAGETOOL_URL
+        value: https://api.languagetool.org/v2/check
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false

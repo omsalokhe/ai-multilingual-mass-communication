@@ -1,46 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Calendar } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Calendar, Loader2 } from "lucide-react";
 import TopBar from "../components/TopBar";
+import { useToast } from "../components/Toast";
+import { createCampaign, getSegments } from "../lib/api";
+import type { SegmentBrief } from "../types";
 
 const STEPS = ["Details", "Audience", "Content", "Review"];
 
 const CAMPAIGN_TYPES = [
-  "Awareness Campaign",
-  "Emergency Alert",
-  "Educational Notification",
-  "Organizational Announcement",
+  { id: 1, name: "Awareness Campaign" },
+  { id: 2, name: "Emergency Alert" },
+  { id: 3, name: "Educational Notification" },
 ];
 
-const CHANNELS = ["Email", "SMS", "WhatsApp", "Push Notifications", "Web Broadcast", "Social Media"];
-
-const AUDIENCE_SEGMENTS = [
-  { id: 1, name: "Urban Youth", count: 5420 },
-  { id: 2, name: "Rural Communities", count: 6391 },
-  { id: 3, name: "Students", count: 4120 },
-  { id: 4, name: "Healthcare Workers", count: 1230 },
-  { id: 5, name: "General Public", count: 8650 },
-  { id: 6, name: "Employers", count: 6723 },
-];
+const PRIORITIES = ["LOW", "NORMAL", "HIGH", "CRITICAL"];
 
 export default function CreateCampaign() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [campaignName, setCampaignName] = useState("");
-  const [campaignType, setCampaignType] = useState("");
-  const [campaignTone, setCampaignTone] = useState("Formal");
+  const [campaignTypeId, setCampaignTypeId] = useState(1);
+  const [priority, setPriority] = useState("NORMAL");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [objective, setObjective] = useState("");
   const [selectedSegments, setSelectedSegments] = useState<number[]>([]);
   const [contentBody, setContentBody] = useState("");
   const [contentSubject, setContentSubject] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const toggleChannel = (ch: string) => {
-    setSelectedChannels((prev) =>
-      prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]
-    );
+  // Fetch real segments from backend
+  const [segments, setSegments] = useState<SegmentBrief[]>([]);
+  const [loadingSegments, setLoadingSegments] = useState(true);
+
+  useEffect(() => {
+    fetchSegments();
+  }, []);
+
+  const fetchSegments = async () => {
+    setLoadingSegments(true);
+    try {
+      const data = await getSegments();
+      setSegments(data);
+    } catch (err) {
+      console.error("Failed to load segments:", err);
+    } finally {
+      setLoadingSegments(false);
+    }
   };
 
   const toggleSegment = (id: number) => {
@@ -51,13 +58,37 @@ export default function CreateCampaign() {
 
   const canProceed = () => {
     switch (step) {
-      case 0: return campaignName.trim() && campaignType;
+      case 0: return campaignName.trim();
       case 1: return selectedSegments.length > 0;
-      case 2: return contentBody.trim();
+      case 2: return true; // Content is optional — can be AI-generated later
       case 3: return true;
       default: return false;
     }
   };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const res = await createCampaign({
+        name: campaignName.trim(),
+        description: description || undefined,
+        campaign_type_id: campaignTypeId,
+        objective: objective || description || campaignName,
+        priority,
+        segment_ids: selectedSegments,
+      });
+      toast("success", res.message);
+      // Navigate to the new campaign's pipeline
+      navigate(`/campaigns/${res.campaign_id}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create campaign";
+      toast("error", msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getTypeName = () => CAMPAIGN_TYPES.find(t => t.id === campaignTypeId)?.name || "Awareness";
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -124,31 +155,37 @@ export default function CreateCampaign() {
                   <div>
                     <label className="text-xs font-medium text-slate-600 mb-1.5 block">Campaign Type *</label>
                     <select
-                      value={campaignType}
-                      onChange={(e) => setCampaignType(e.target.value)}
+                      value={campaignTypeId}
+                      onChange={(e) => setCampaignTypeId(Number(e.target.value))}
                       className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm bg-white input-focus appearance-none"
                     >
-                      <option value="">Select type...</option>
                       {CAMPAIGN_TYPES.map((t) => (
-                        <option key={t}>{t}</option>
+                        <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Tone</label>
+                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Priority</label>
                     <select
-                      value={campaignTone}
-                      onChange={(e) => setCampaignTone(e.target.value)}
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm bg-white input-focus appearance-none"
                     >
-                      <option value="">Select tone...</option>
-                      <option value="Formal">Formal</option>
-                      <option value="Friendly">Friendly</option>
-                      <option value="Urgent">Urgent</option>
-                      <option value="Informative">Informative</option>
-                      <option value="Promotional">Promotional</option>
+                      {PRIORITIES.map((p) => (
+                        <option key={p} value={p}>{p.charAt(0) + p.slice(1).toLowerCase()}</option>
+                      ))}
                     </select>
                   </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">Objective</label>
+                  <input
+                    type="text"
+                    value={objective}
+                    onChange={(e) => setObjective(e.target.value)}
+                    placeholder="What is the goal of this campaign?"
+                    className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus"
+                  />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -163,54 +200,20 @@ export default function CreateCampaign() {
                     className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus resize-none"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 flex items-center gap-1"><Calendar size={10} /> Start Date</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 flex items-center gap-1"><Calendar size={10} /> End Date</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus"
-                    />
-                  </div>
-                </div>
               </div>
             )}
 
             {step === 1 && (
               <div className="space-y-5">
-                <h2 className="text-sm font-bold text-slate-800 mb-4">Select Audience</h2>
-                <div>
-                  <label className="text-xs font-medium text-slate-600 mb-2 block">Channels</label>
-                  <div className="flex flex-wrap gap-2">
-                    {CHANNELS.map((ch) => (
-                      <button
-                        key={ch}
-                        onClick={() => toggleChannel(ch)}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
-                          selectedChannels.includes(ch)
-                            ? "bg-blue-50 border-blue-300 text-blue-700"
-                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                        }`}
-                      >
-                        {ch}
-                      </button>
-                    ))}
+                <h2 className="text-sm font-bold text-slate-800 mb-4">Select Audience Segments *</h2>
+                {loadingSegments ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 size={20} className="text-blue-500 animate-spin" />
+                    <span className="ml-2 text-sm text-slate-500">Loading segments...</span>
                   </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-slate-600 mb-2 block">Audience Segments *</label>
+                ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {AUDIENCE_SEGMENTS.map((seg) => (
+                    {segments.map((seg) => (
                       <button
                         key={seg.id}
                         onClick={() => toggleSegment(seg.id)}
@@ -222,7 +225,12 @@ export default function CreateCampaign() {
                       >
                         <div>
                           <span className="text-sm font-medium text-slate-800">{seg.name}</span>
-                          <span className="block text-xs text-slate-500">{seg.count.toLocaleString()} recipients</span>
+                          <span className="block text-xs text-slate-500">
+                            {seg.member_count} member{seg.member_count !== 1 ? "s" : ""}
+                          </span>
+                          {seg.description && (
+                            <span className="block text-[11px] text-slate-400 mt-0.5">{seg.description}</span>
+                          )}
                         </div>
                         <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${
                           selectedSegments.includes(seg.id)
@@ -233,14 +241,22 @@ export default function CreateCampaign() {
                         </div>
                       </button>
                     ))}
+                    {segments.length === 0 && (
+                      <p className="col-span-2 text-center text-xs text-slate-400 py-8">
+                        No audience segments found. Seed sample data from the API docs.
+                      </p>
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             )}
 
             {step === 2 && (
               <div className="space-y-5">
                 <h2 className="text-sm font-bold text-slate-800 mb-4">Campaign Content</h2>
+                <p className="text-xs text-slate-500 -mt-2 mb-3">
+                  Optional — you can also generate content using AI after creating the campaign.
+                </p>
                 <div>
                   <label className="text-xs font-medium text-slate-600 mb-1.5 block">Subject Line</label>
                   <input
@@ -252,11 +268,11 @@ export default function CreateCampaign() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">Message Body *</label>
+                  <label className="text-xs font-medium text-slate-600 mb-1.5 block">Message Body</label>
                   <textarea
                     value={contentBody}
                     onChange={(e) => setContentBody(e.target.value)}
-                    placeholder="Write your campaign message..."
+                    placeholder="Write your campaign message or leave empty to use AI generation..."
                     rows={8}
                     className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus resize-none"
                   />
@@ -275,9 +291,9 @@ export default function CreateCampaign() {
                     <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Campaign Details</h3>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div><span className="text-slate-500">Name:</span> <span className="font-medium text-slate-800">{campaignName || "—"}</span></div>
-                      <div><span className="text-slate-500">Type:</span> <span className="font-medium text-slate-800">{campaignType || "—"}</span></div>
-                      <div><span className="text-slate-500">Start:</span> <span className="font-medium text-slate-800">{startDate || "—"}</span></div>
-                      <div><span className="text-slate-500">End:</span> <span className="font-medium text-slate-800">{endDate || "—"}</span></div>
+                      <div><span className="text-slate-500">Type:</span> <span className="font-medium text-slate-800">{getTypeName()}</span></div>
+                      <div><span className="text-slate-500">Priority:</span> <span className="font-medium text-slate-800">{priority}</span></div>
+                      <div><span className="text-slate-500">Objective:</span> <span className="font-medium text-slate-800">{objective || "—"}</span></div>
                     </div>
                     {description && (
                       <p className="text-xs text-slate-600 mt-2">{description}</p>
@@ -288,31 +304,24 @@ export default function CreateCampaign() {
                     <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Audience</h3>
                     <div className="flex flex-wrap gap-2">
                       {selectedSegments.map((id) => {
-                        const seg = AUDIENCE_SEGMENTS.find((s) => s.id === id);
+                        const seg = segments.find((s) => s.id === id);
                         return seg ? (
                           <span key={id} className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
-                            {seg.name} ({seg.count.toLocaleString()})
+                            {seg.name} ({seg.member_count})
                           </span>
                         ) : null;
                       })}
                       {selectedSegments.length === 0 && <span className="text-xs text-slate-400">No segments selected</span>}
                     </div>
-                    {selectedChannels.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {selectedChannels.map((ch) => (
-                          <span key={ch} className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
-                            {ch}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
-                  <div className="p-4 rounded-lg bg-slate-50 border border-slate-100">
-                    <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Content</h3>
-                    {contentSubject && <p className="text-sm font-medium text-slate-800 mb-1">{contentSubject}</p>}
-                    <p className="text-xs text-slate-600 leading-relaxed">{contentBody || "No content added"}</p>
-                  </div>
+                  {(contentSubject || contentBody) && (
+                    <div className="p-4 rounded-lg bg-slate-50 border border-slate-100">
+                      <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Content</h3>
+                      {contentSubject && <p className="text-sm font-medium text-slate-800 mb-1">{contentSubject}</p>}
+                      <p className="text-xs text-slate-600 leading-relaxed">{contentBody || "No content added — use AI generation after creation"}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -330,13 +339,24 @@ export default function CreateCampaign() {
             <button
               onClick={() => {
                 if (step < 3) setStep(step + 1);
-                else navigate("/campaigns");
+                else handleSubmit();
               }}
-              disabled={!canProceed()}
+              disabled={!canProceed() || submitting}
               className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {step === 3 ? "Create Campaign" : "Next"}
-              {step < 3 && <ArrowRight size={14} />}
+              {submitting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Creating...
+                </>
+              ) : step === 3 ? (
+                "Create Campaign"
+              ) : (
+                <>
+                  Next
+                  <ArrowRight size={14} />
+                </>
+              )}
             </button>
           </div>
         </div>

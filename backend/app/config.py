@@ -34,11 +34,25 @@ class Settings(BaseSettings):
     # Default: free public API. Override with local Docker: http://localhost:8010/v2/check
     LANGUAGETOOL_URL: str = "https://api.languagetool.org/v2/check"
 
+    # Step 6: Dispatch Channels (Email SMTP & Twilio SMS/WhatsApp)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_FROM_NAME: str = "ConnectAI Mass Communications"
+
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_PHONE_NUMBER: str = "+17372508034"
+    TWILIO_WHATSAPP_NUMBER: str = "+17372508034"
+
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR / ".env"),
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
 
 
 settings = Settings()

@@ -1,5 +1,7 @@
+import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -32,6 +34,90 @@ from app.services.sentiment_service import SentimentService
 from app.services.quality_service import QualityService
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns & Multilingual AI Pipeline"])
+
+
+# ── Create Campaign Schema ─────────────────────
+class CreateCampaignRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    campaign_type_id: int = Field(default=1, description="Campaign type ID (1=Awareness, 2=Emergency, 3=Educational)")
+    objective: Optional[str] = None
+    priority: str = Field(default="NORMAL", description="LOW, NORMAL, HIGH, CRITICAL")
+    segment_ids: List[int] = Field(default=[], description="List of audience segment IDs to link")
+    channel: Optional[str] = Field(default=None, description="Primary channel: EMAIL, SMS, WHATSAPP, PUSH, WEB, SOCIAL")
+
+
+class CreateCampaignResponse(BaseModel):
+    success: bool
+    campaign_id: int
+    campaign_code: str
+    name: str
+    status: str
+    message: str
+
+
+@router.post(
+    "",
+    response_model=CreateCampaignResponse,
+    summary="Create a new campaign",
+    description="Creates a new campaign with the given details, links audience segments, and returns the campaign ID."
+)
+def create_campaign(request: CreateCampaignRequest, db: Session = Depends(get_db)):
+    # Validate campaign type exists
+    camp_type = db.query(CampaignType).filter(CampaignType.id == request.campaign_type_id).first()
+    if not camp_type:
+        raise HTTPException(status_code=400, detail=f"Campaign type ID {request.campaign_type_id} not found.")
+
+    # Generate unique campaign code
+    short_id = uuid.uuid4().hex[:6].upper()
+    campaign_code = f"CAMP-{short_id}"
+
+    # Create the campaign
+    campaign = Campaign(
+        campaign_code=campaign_code,
+        name=request.name,
+        description=request.description,
+        campaign_type_id=request.campaign_type_id,
+        objective=request.objective or request.description or request.name,
+        priority=request.priority.upper(),
+        status="DRAFT",
+        created_by=1,
+    )
+    db.add(campaign)
+    db.flush()  # Get the ID
+
+    # Link audience segments
+    for seg_id in request.segment_ids:
+        segment = db.query(AudienceSegment).filter(AudienceSegment.id == seg_id).first()
+        if segment:
+            mapping = CampaignAudience(campaign_id=campaign.id, segment_id=seg_id)
+            db.add(mapping)
+
+    db.commit()
+    db.refresh(campaign)
+
+    return CreateCampaignResponse(
+        success=True,
+        campaign_id=campaign.id,
+        campaign_code=campaign.campaign_code,
+        name=campaign.name,
+        status=campaign.status,
+        message=f"Campaign '{campaign.name}' created successfully."
+    )
+
+
+@router.delete(
+    "/{id}",
+    summary="Delete a campaign",
+    description="Deletes a campaign and all its associated contents, audience mappings, etc."
+)
+def delete_campaign(id: int, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    db.delete(campaign)
+    db.commit()
+    return {"success": True, "message": f"Campaign {id} deleted successfully."}
 
 
 @router.post(

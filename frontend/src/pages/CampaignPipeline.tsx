@@ -24,6 +24,8 @@ import StepTranslate from "./pipeline/StepTranslate";
 import StepPersonalize from "./pipeline/StepPersonalize";
 import StepSentiment from "./pipeline/StepSentiment";
 import StepQuality from "./pipeline/StepQuality";
+import StepDispatch from "./pipeline/StepDispatch";
+import { Send } from "lucide-react";
 
 const STEPS = [
   { key: "generate", label: "Generate", icon: Sparkles },
@@ -31,6 +33,7 @@ const STEPS = [
   { key: "personalize", label: "Personalize", icon: UserCheck },
   { key: "sentiment", label: "Sentiment", icon: Activity },
   { key: "quality", label: "Quality", icon: ShieldCheck },
+  { key: "dispatch", label: "Dispatch / Send", icon: Send },
 ] as const;
 
 type StepKey = (typeof STEPS)[number]["key"];
@@ -316,7 +319,16 @@ export default function CampaignPipeline() {
             {activeStep === "quality" && (
               <StepQuality
                 campaignId={campaign.id}
-                onComplete={() => markComplete("quality")}
+                onComplete={() => {
+                  markComplete("quality");
+                  setActiveStep("dispatch");
+                }}
+              />
+            )}
+            {activeStep === "dispatch" && (
+              <StepDispatch
+                campaignId={campaign.id}
+                onComplete={() => markComplete("dispatch")}
               />
             )}
           </div>

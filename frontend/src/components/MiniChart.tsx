@@ -176,7 +176,10 @@ export function DonutChart({
   let accumulated = 0;
 
   return (
-    <div className={`inline-flex flex-col items-center ${className}`}>
+    <div
+      className={`relative inline-flex items-center justify-center shrink-0 ${className}`}
+      style={{ width: size, height: size }}
+    >
       <svg width={size} height={size} className="-rotate-90">
         {/* Background track */}
         <circle
@@ -216,15 +219,12 @@ export function DonutChart({
       </svg>
       {/* Center text */}
       {(centerLabel || centerValue) && (
-        <div
-          className="absolute flex flex-col items-center justify-center"
-          style={{ width: size, height: size, marginTop: -(size) }}
-        >
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-1">
           {centerValue !== undefined && (
-            <span className="text-xl font-bold text-slate-800">{centerValue}</span>
+            <span className="text-xl font-bold text-slate-800 leading-tight">{centerValue}</span>
           )}
           {centerLabel && (
-            <span className="text-[10px] text-slate-500">{centerLabel}</span>
+            <span className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">{centerLabel}</span>
           )}
         </div>
       )}

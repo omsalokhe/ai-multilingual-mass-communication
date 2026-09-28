@@ -17,7 +17,7 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
 }
 
-export default function DataTable<T extends Record<string, unknown>>({
+export default function DataTable<T extends object>({
   columns,
   data,
   pageSize = 5,
@@ -31,8 +31,8 @@ export default function DataTable<T extends Record<string, unknown>>({
   const sorted = useMemo(() => {
     if (!sortKey) return data;
     return [...data].sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
+      const av = (a as Record<string, any>)[sortKey];
+      const bv = (b as Record<string, any>)[sortKey];
       if (av === bv) return 0;
       if (av == null) return 1;
       if (bv == null) return -1;
@@ -92,7 +92,7 @@ export default function DataTable<T extends Record<string, unknown>>({
               >
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3 text-slate-700">
-                    {col.render ? col.render(row) : String(row[col.key] ?? "—")}
+                    {col.render ? col.render(row) : String((row as Record<string, any>)[col.key] ?? "—")}
                   </td>
                 ))}
               </tr>

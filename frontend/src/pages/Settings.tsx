@@ -1,6 +1,8 @@
-import { useState } from "react";
-import { User, Shield, Bell, Globe, Link as LinkIcon, Save, Camera } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, Shield, Bell, Globe, Link as LinkIcon, Save, Camera, CheckCircle2 } from "lucide-react";
 import TopBar from "../components/TopBar";
+import { useAppSettings } from "../context/AppSettingsContext";
+import { useToast } from "../components/Toast";
 
 const SETTINGS_TABS = [
   { label: "Profile", icon: User },
@@ -12,17 +14,36 @@ const SETTINGS_TABS = [
 ];
 
 export default function Settings() {
+  const { profile, generalSettings, updateProfile, updateDefaultLanguage, updateTimezone, toggleDarkMode } = useAppSettings();
+  const { toast } = useToast();
+
   const [activeTab, setActiveTab] = useState("Profile");
-  const [fullName, setFullName] = useState("Om Sabitha");
-  const [email, setEmail] = useState("om.sabitha@masscomm.gov.in");
-  const [phone, setPhone] = useState("+91 9876543210");
-  const [organization, setOrganization] = useState("PSG College of Engineering");
-  const [role, setRole] = useState("Campaign Manager");
+  const [fullName, setFullName] = useState(profile.fullName);
+  const [email, setEmail] = useState(profile.email);
+  const [phone, setPhone] = useState(profile.phone);
+  const [organization, setOrganization] = useState(profile.organization);
+  const [role, setRole] = useState(profile.role);
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    setFullName(profile.fullName);
+    setEmail(profile.email);
+    setPhone(profile.phone);
+    setOrganization(profile.organization);
+    setRole(profile.role);
+  }, [profile]);
+
   const handleSave = () => {
+    updateProfile({
+      fullName: fullName.trim() || profile.fullName,
+      email: email.trim(),
+      phone: phone.trim(),
+      organization: organization.trim(),
+      role: role.trim(),
+    });
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    toast("success", "Profile updated successfully! Changes reflected across the platform.");
+    setTimeout(() => setSaved(false), 2500);
   };
 
   return (
@@ -65,16 +86,19 @@ export default function Settings() {
                 {/* Avatar */}
                 <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
                   <div className="relative">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold">
-                      OM
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-md">
+                      {profile.avatarInitials}
                     </div>
                     <button className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm hover:bg-slate-50 transition-colors">
                       <Camera size={12} className="text-slate-500" />
                     </button>
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800">Om Sabitha</h3>
-                    <p className="text-xs text-slate-500">{role}</p>
+                    <h3 className="text-base font-bold text-slate-800">{profile.fullName}</h3>
+                    <p className="text-xs text-slate-500">{profile.role}</p>
+                    <span className="inline-flex items-center gap-1 mt-1 text-[11px] text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                      <CheckCircle2 size={11} /> Active Administrator
+                    </span>
                   </div>
                 </div>
 
@@ -86,6 +110,7 @@ export default function Settings() {
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
+                      placeholder="e.g. Om salokhe"
                       className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus"
                     />
                   </div>
@@ -96,7 +121,6 @@ export default function Settings() {
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus bg-slate-50"
-                      disabled
                     />
                   </div>
                   <div>
@@ -128,14 +152,19 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-slate-100">
+                <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
                   <button
                     onClick={handleSave}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
                   >
-                    <Save size={14} />
-                    {saved ? "Saved!" : "Update Profile"}
+                    <Save size={15} />
+                    {saved ? "Saved Successfully!" : "Update Profile"}
                   </button>
+                  {saved && (
+                    <span className="text-xs font-semibold text-emerald-600 animate-fade-in">
+                      ✓ Profile details updated and synchronized
+                    </span>
+                  )}
                 </div>
               </div>
             )}
@@ -206,12 +235,26 @@ export default function Settings() {
                   <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200">
                     <div>
                       <h3 className="text-sm font-medium text-slate-700">Default Language</h3>
-                      <p className="text-xs text-slate-500">Set the default language for content generation.</p>
+                      <p className="text-xs text-slate-500">Set the default language across content generation and campaigns.</p>
+                      <span className="inline-block mt-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                        Currently Active: {generalSettings.defaultLanguage}
+                      </span>
                     </div>
-                    <select className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-white input-focus appearance-none cursor-pointer">
-                      <option>English</option>
-                      <option>Hindi</option>
-                      <option>Kannada</option>
+                    <select
+                      value={generalSettings.defaultLanguage}
+                      onChange={(e) => {
+                        const newLang = e.target.value;
+                        updateDefaultLanguage(newLang);
+                        toast("success", `Default language set to ${newLang}. Content templates and generator will default to this language.`);
+                      }}
+                      className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium bg-white input-focus cursor-pointer min-w-[160px]"
+                    >
+                      <option value="English">English</option>
+                      <option value="Hindi">Hindi (हिन्दी)</option>
+                      <option value="Marathi">Marathi (मराठी)</option>
+                      <option value="Kannada">Kannada (ಕನ್ನಡ)</option>
+                      <option value="Tamil">Tamil (தமிழ்)</option>
+                      <option value="Telugu">Telugu (తెలుగు)</option>
                     </select>
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200">
@@ -219,9 +262,18 @@ export default function Settings() {
                       <h3 className="text-sm font-medium text-slate-700">Timezone</h3>
                       <p className="text-xs text-slate-500">Set your timezone for scheduling campaigns.</p>
                     </div>
-                    <select className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-white input-focus appearance-none cursor-pointer">
-                      <option>Asia/Kolkata (IST)</option>
-                      <option>UTC</option>
+                    <select
+                      value={generalSettings.timezone}
+                      onChange={(e) => {
+                        updateTimezone(e.target.value);
+                        toast("info", `Timezone updated to ${e.target.value}`);
+                      }}
+                      className="px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white input-focus cursor-pointer"
+                    >
+                      <option value="Asia/Kolkata (IST)">Asia/Kolkata (IST)</option>
+                      <option value="UTC">UTC</option>
+                      <option value="America/New_York (EST)">America/New_York (EST)</option>
+                      <option value="Europe/London (GMT)">Europe/London (GMT)</option>
                     </select>
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200">
@@ -229,8 +281,20 @@ export default function Settings() {
                       <h3 className="text-sm font-medium text-slate-700">Dark Mode</h3>
                       <p className="text-xs text-slate-500">Switch between light and dark themes.</p>
                     </div>
-                    <button className="w-12 h-6 rounded-full bg-slate-200 relative transition-colors">
-                      <span className="absolute left-1 top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform" />
+                    <button
+                      onClick={() => {
+                        toggleDarkMode();
+                        toast("info", !generalSettings.darkMode ? "Dark mode preference saved" : "Light theme active");
+                      }}
+                      className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer ${
+                        generalSettings.darkMode ? "bg-blue-600" : "bg-slate-200"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
+                          generalSettings.darkMode ? "left-7" : "left-1"
+                        }`}
+                      />
                     </button>
                   </div>
                 </div>

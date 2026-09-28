@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useAppSettings } from "../context/AppSettingsContext";
 import {
   LayoutDashboard,
   Megaphone,
@@ -15,19 +16,20 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/campaigns", icon: Megaphone, label: "Campaigns" },
-  { to: "/audience", icon: Users, label: "Audience" },
-  { to: "/content-templates", icon: FileText, label: "Content & Templates" },
-  { to: "/channels", icon: Radio, label: "Channels" },
-  { to: "/analytics", icon: BarChart3, label: "Analytics" },
-  { to: "/reports", icon: ClipboardList, label: "Reports" },
-  { to: "/settings", icon: Settings, label: "Settings" },
+  { to: "/", icon: LayoutDashboard, key: "nav_dashboard", fallback: "Dashboard" },
+  { to: "/campaigns", icon: Megaphone, key: "nav_campaigns", fallback: "Campaigns" },
+  { to: "/audience", icon: Users, key: "nav_audience", fallback: "Audience" },
+  { to: "/content-templates", icon: FileText, key: "nav_templates", fallback: "Content & Templates" },
+  { to: "/channels", icon: Radio, key: "nav_channels", fallback: "Channels" },
+  { to: "/analytics", icon: BarChart3, key: "nav_analytics", fallback: "Analytics" },
+  { to: "/reports", icon: ClipboardList, key: "nav_reports", fallback: "Reports" },
+  { to: "/settings", icon: Settings, key: "nav_settings", fallback: "Settings" },
 ];
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { profile, t } = useAppSettings();
 
   const isActive = (to: string) => {
     if (to === "/") return location.pathname === "/";
@@ -93,7 +95,7 @@ export default function Sidebar() {
               }
             >
               <item.icon size={18} className={isActive(item.to) ? "text-blue-600" : "text-slate-400"} />
-              {item.label}
+              {t(item.key) || item.fallback}
             </NavLink>
           ))}
         </nav>
@@ -102,11 +104,11 @@ export default function Sidebar() {
         <div className="px-4 py-4 border-t border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-              OS
+              {profile.avatarInitials}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-slate-700 truncate">Om Sabitha</span>
-              <span className="text-[10px] text-slate-400 truncate">Campaign Manager</span>
+              <span className="text-xs font-semibold text-slate-700 truncate">{profile.fullName}</span>
+              <span className="text-[10px] text-slate-400 truncate">{profile.role}</span>
             </div>
           </div>
         </div>

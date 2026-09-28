@@ -478,19 +478,12 @@ class TranslationService:
     def _translate_offline(cls, text: str, objective: str, target_lang: str) -> str:
         """
         High-fidelity realistic fallback for Indian languages ensuring zero failure.
-        Covers Dengue prevention, flood/disaster alerts, and general civic advisories.
+        Covers corona, dengue, floods, vaccines, heatwave, utilities, traffic, and general civic advisories.
         """
-        corpus_key = "general"
-        combined = f"{text} {objective}".lower()
-
-        if "dengue" in combined or "mosquito" in combined or "fever" in combined:
-            corpus_key = "dengue"
-        elif "flood" in combined or "rain" in combined or "storm" in combined:
-            corpus_key = "flood"
-
-        lang_dict = OFFLINE_DOMAIN_TRANSLATIONS.get(corpus_key, OFFLINE_DOMAIN_TRANSLATIONS["general"])
-        if target_lang in lang_dict:
-            return lang_dict[target_lang]
-
-        # Generic fallback in case of an uncommon language code
-        return f"[{INDIAN_LANGUAGES.get(target_lang, target_lang.upper())} Alert] {text}"
+        from app.services.multilingual_content import get_multilingual_message
+        topic_to_use = objective or text[:80]
+        return get_multilingual_message(
+            topic=topic_to_use,
+            language=target_lang,
+            max_chars=max(len(text) + 200, 700)
+        )

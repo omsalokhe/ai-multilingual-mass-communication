@@ -67,14 +67,9 @@ class LLMClient:
     async def _call_gemini(cls, prompt: str) -> str:
         """Call Google Gemini Flash via REST API with smart model fallback."""
         candidate_models = [
-            settings.GEMINI_MODEL,
-            "gemini-2.5-flash",
-            "gemini-3.6-flash",
-            "gemini-flash-latest",
-            "gemini-1.5-flash"
+            "gemini-1.5-flash",
+            "gemini-2.0-flash"
         ]
-        # remove empty or duplicates while preserving order
-        candidate_models = list(dict.fromkeys([m for m in candidate_models if m]))
 
         system_instruction = (
             "You are an expert government and public welfare communication specialist. "
@@ -92,7 +87,7 @@ class LLMClient:
             ],
             "generationConfig": {
                 "temperature": 0.7,
-                "maxOutputTokens": 300
+                "maxOutputTokens": 600
             }
         }
 
@@ -106,8 +101,8 @@ class LLMClient:
                         data = response.json()
                         candidate = data["candidates"][0]["content"]["parts"][0]["text"]
                         return candidate.strip()
-                    elif response.status_code == 404:
-                        logger.info(f"Model {model} returned 404, trying next available model...")
+                    elif response.status_code in (404, 400):
+                        logger.info(f"Model {model} returned {response.status_code}, trying next available model...")
                         continue
                     else:
                         response.raise_for_status()
@@ -141,7 +136,7 @@ class LLMClient:
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.7,
-            "max_tokens": 300
+            "max_tokens": 500
         }
 
         async with httpx.AsyncClient(timeout=25.0) as client:
@@ -152,47 +147,26 @@ class LLMClient:
 
     @classmethod
     def _generate_mock(cls, prompt: str, ctx: Optional[dict], max_chars: int) -> str:
-        """Generate high-quality context-aware message when no API key is provided."""
+        """Generate high-quality context-aware message specifically tailored to the topic and language."""
         ctx = ctx or {}
-        topic = ctx.get("objective") or ctx.get("name") or "Public Awareness Alert"
-        tone = (ctx.get("tone") or "Informative").upper()
-        camp_type = ctx.get("campaign_type") or "Awareness"
-        channel = ctx.get("channel") or "SMS"
-        audiences = ctx.get("audiences") or "citizens"
+        topic = (ctx.get("objective") or ctx.get("name") or "").strip()
+        guidance = (ctx.get("guidance") or "").strip()
+        tone = (ctx.get("tone") or "Formal").strip()
+        channel = (ctx.get("channel") or "EMAIL").strip()
+        language = (ctx.get("language") or "English").strip()
 
-        if "dengue" in topic.lower() or "health" in topic.lower():
-            if "URGENT" in tone:
-                msg = (
-                    "URGENT HEALTH NOTICE: Protect your family from Dengue! "
-                    "Ensure no stagnant water in coolers/pots. Use mosquito nets & repellents. "
-                    "Report high fever immediately. Helpline: 104."
-                )
-            else:
-                msg = (
-                    "Public Health Advisory: Prevent mosquito breeding by emptying standing water weekly. "
-                    "Stay protected with mosquito repellents and wear covered clothing. "
-                    "Free health checkups available at nearest PHC. Call 104 for support."
-                )
-        elif "flood" in topic.lower() or "emergency" in topic.lower():
-            msg = (
-                "EMERGENCY ADVISORY: Heavy rainfall & flood alert in your district. "
-                "Move to designated higher shelter zones. Keep emergency kits ready. "
-                "Do not enter flooded roads. State Disaster Helpline: 1070 / 112."
-            )
-        elif "education" in topic.lower() or "scholarship" in topic.lower():
-            msg = (
-                f"Notice for {audiences}: National scholarship & educational portal registration is now open. "
-                "Submit your application and verified documents before the upcoming deadline. "
-                "Visit the official portal or your school office for guidance."
-            )
-        else:
-            msg = (
-                f"PUBLIC NOTICE ({camp_type.upper()}): {topic}. "
-                f"Attention {audiences}: Please follow official department guidelines. "
-                "For inquiries and verified updates, contact your district administrative office."
-            )
+        # If topic was empty, try to extract from prompt
+        if not topic:
+            import re
+            m = re.search(r"about ['\"]?([^'\"]+?)['\"]? for", prompt)
+            topic = m.group(1).strip() if m else "Public Communication Notice"
 
-        # Truncate to limit if needed
-        if len(msg) > max_chars:
-            msg = msg[:max_chars - 3].rstrip() + "..."
-        return msg
+        from app.services.multilingual_content import get_multilingual_message
+        return get_multilingual_message(
+            topic=topic,
+            language=language,
+            guidance=guidance,
+            tone=tone,
+            channel=channel,
+            max_chars=max_chars
+        )
