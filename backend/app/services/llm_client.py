@@ -67,8 +67,8 @@ class LLMClient:
     async def _call_gemini(cls, prompt: str) -> str:
         """Call Google Gemini Flash via REST API with smart model fallback."""
         candidate_models = [
-            "gemini-1.5-flash",
-            "gemini-2.0-flash"
+            settings.GEMINI_MODEL or "gemini-3.8-flash",
+            "gemini-2.5-flash"
         ]
 
         system_instruction = (
@@ -92,7 +92,7 @@ class LLMClient:
         }
 
         last_error = None
-        async with httpx.AsyncClient(timeout=25.0) as client:
+        async with httpx.AsyncClient(timeout=3.5) as client:
             for model in candidate_models:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={settings.GEMINI_API_KEY}"
                 try:
@@ -101,14 +101,12 @@ class LLMClient:
                         data = response.json()
                         candidate = data["candidates"][0]["content"]["parts"][0]["text"]
                         return candidate.strip()
-                    elif response.status_code in (404, 400):
-                        logger.info(f"Model {model} returned {response.status_code}, trying next available model...")
-                        continue
                     else:
-                        response.raise_for_status()
+                        last_error = RuntimeError(f"Model {model} returned HTTP {response.status_code}")
+                        break
                 except Exception as e:
                     last_error = e
-                    continue
+                    break
 
         if last_error:
             raise last_error
@@ -139,7 +137,7 @@ class LLMClient:
             "max_tokens": 500
         }
 
-        async with httpx.AsyncClient(timeout=25.0) as client:
+        async with httpx.AsyncClient(timeout=3.5) as client:
             response = await client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()

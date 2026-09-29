@@ -1,6 +1,7 @@
 import logging
 import json
 import re
+import asyncio
 import httpx
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -116,13 +117,8 @@ class QualityService:
         camp_type = campaign.campaign_type.name.lower() if campaign.campaign_type else "general"
 
         # 3. Run checks on each content item
-        reports = []
-        grammar_pass = 0
-        compliance_pass = 0
-        factual_pass = 0
-
-        for content in contents:
-            report = await cls._check_single_content(
+        tasks = [
+            cls._check_single_content(
                 db=db,
                 content=content,
                 campaign_type=camp_type,
@@ -130,13 +126,13 @@ class QualityService:
                 provider=req.provider,
                 languagetool_url=req.languagetool_url
             )
-            reports.append(report)
-            if report["grammar_ok"]:
-                grammar_pass += 1
-            if report["compliance_ok"]:
-                compliance_pass += 1
-            if report["factual_ok"]:
-                factual_pass += 1
+            for content in contents
+        ]
+        reports = await asyncio.gather(*tasks)
+
+        grammar_pass = sum(1 for r in reports if r["grammar_ok"])
+        compliance_pass = sum(1 for r in reports if r["compliance_ok"])
+        factual_pass = sum(1 for r in reports if r["factual_ok"])
 
         # 4. Build summary
         total = len(reports)
@@ -287,7 +283,7 @@ class QualityService:
         lt_locale = LANGUAGETOOL_LOCALES.get(lang_code, lang_code)
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with httpx.AsyncClient(timeout=3.0) as client:
                 response = await client.post(
                     lt_url,
                     data={
@@ -534,6 +530,9 @@ class QualityService:
             provider=provider,
             max_characters=500
         )
+
+        if "mock" in provider_used.lower() or "offline" in str(model_used).lower():
+            return cls._rule_based_factual(text)
 
         # Parse LLM response
         try:

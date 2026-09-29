@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
@@ -24,6 +25,27 @@ async def lifespan(app: FastAPI):
     """Initializes tables and seeds sample data on server startup."""
     logger.info("Initializing database schema...")
     Base.metadata.create_all(bind=engine)
+
+    # Ensure schema migrations / new columns exist
+    try:
+        from sqlalchemy import inspect, text
+        insp = inspect(engine)
+        if insp.has_table("content_quality_reports"):
+            cols = {c["name"] for c in insp.get_columns("content_quality_reports")}
+            with engine.connect() as conn:
+                if "grammar_issues" not in cols:
+                    conn.execute(text("ALTER TABLE content_quality_reports ADD COLUMN grammar_issues TEXT NULL;"))
+                if "factual_issues" not in cols:
+                    conn.execute(text("ALTER TABLE content_quality_reports ADD COLUMN factual_issues TEXT NULL;"))
+                if "compliance_issues" not in cols:
+                    conn.execute(text("ALTER TABLE content_quality_reports ADD COLUMN compliance_issues TEXT NULL;"))
+                try:
+                    conn.execute(text("ALTER TABLE content_quality_reports MODIFY COLUMN status VARCHAR(30) DEFAULT 'APPROVED';"))
+                except Exception:
+                    pass
+                conn.commit()
+    except Exception as exc:
+        logger.warning(f"Could not auto-migrate schema columns: {exc}")
 
     # Automatically seed sample master data and test campaign if empty
     db = SessionLocal()
@@ -56,14 +78,48 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS Middleware configuration
+# CORS Middleware configuration - permissive origin regex to ensure headers on all responses
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_origin_regex=r".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    origin = request.headers.get("origin") or "*"
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers={
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception(f"Unhandled server error on {request.method} {request.url.path}: {exc}")
+    origin = request.headers.get("origin") or "*"
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"},
+        headers={
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
+
 
 # Include all routers
 app.include_router(campaigns_router)

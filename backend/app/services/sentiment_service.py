@@ -1,6 +1,7 @@
 import logging
 import json
 import re
+import asyncio
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -90,19 +91,21 @@ class SentimentService:
                 detail=f"No content found for campaign {campaign_id}. Generate content first (Step 1)."
             )
 
-        # 3. Analyze each content item
-        reports = []
-        sentiment_counts = {"POSITIVE": 0, "NEUTRAL": 0, "NEGATIVE": 0}
-        total_overall = 0
-
-        for content in contents:
-            report = await cls._analyze_single_content(
+        # 3. Analyze content items concurrently
+        tasks = [
+            cls._analyze_single_content(
                 db=db,
                 content=content,
                 include_tone_suggestions=req.include_tone_suggestions,
                 provider=req.provider
             )
-            reports.append(report)
+            for content in contents
+        ]
+        reports = await asyncio.gather(*tasks)
+
+        sentiment_counts = {"POSITIVE": 0, "NEUTRAL": 0, "NEGATIVE": 0}
+        total_overall = 0
+        for report in reports:
             sentiment_counts[report["sentiment"]] = sentiment_counts.get(report["sentiment"], 0) + 1
             total_overall += report["overall_score"]
 
@@ -324,6 +327,9 @@ class SentimentService:
             provider=provider,
             max_characters=500
         )
+
+        if "mock" in provider_used.lower() or "offline" in str(model_used).lower():
+            return cls._rule_based_tone(text, {})
 
         # Parse LLM response as JSON
         try:

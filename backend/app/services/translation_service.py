@@ -1,5 +1,7 @@
 import logging
 import json
+import time
+import asyncio
 import httpx
 from typing import List, Optional, Tuple, Dict
 from datetime import datetime
@@ -17,6 +19,15 @@ from app.schemas.campaign import (
 from app.services.llm_client import LLMClient
 
 logger = logging.getLogger("uvicorn")
+
+# Global in-memory circuit breaker to prevent cascading timeouts on Render
+_circuit_breaker: Dict[str, float] = {}
+
+def _is_circuit_open(name: str) -> bool:
+    return time.time() < _circuit_breaker.get(name, 0.0)
+
+def _trip_circuit(name: str, duration: float = 180.0):
+    _circuit_breaker[name] = time.time() + duration
 
 # Language code to Name mapping
 INDIAN_LANGUAGES = {
@@ -131,27 +142,41 @@ class TranslationService:
         if not target_languages:
             raise HTTPException(status_code=400, detail="No valid target languages found for translation.")
 
-        # 4. Perform Translations and Upsert into campaign_contents
+        # 4. Perform Translations Concurrently
+        async def translate_one_lang(t_lang: Language):
+            try:
+                b_text, p_used, _ = await cls.translate_text(
+                    text=source_text,
+                    source_lang=source_lang_code,
+                    target_lang=t_lang.code,
+                    campaign_objective=campaign.objective or campaign.name,
+                    provider_override=req.provider
+                )
+            except Exception as e:
+                logger.warning(f"Fallback translating body for {t_lang.code}: {e}")
+                b_text = cls._translate_offline(source_text, campaign.objective or campaign.name, t_lang.code)
+                p_used = "National Language Mission (Indic Fallback Engine)"
+
+            try:
+                s_text, _, _ = await cls.translate_text(
+                    text=source_subject,
+                    source_lang=source_lang_code,
+                    target_lang=t_lang.code,
+                    campaign_objective=campaign.objective or campaign.name,
+                    provider_override=req.provider
+                )
+            except Exception as e:
+                logger.warning(f"Fallback translating subject for {t_lang.code}: {e}")
+                s_text = cls._translate_offline(source_subject, campaign.objective or campaign.name, t_lang.code)
+
+            return t_lang, b_text, s_text, p_used
+
+        translation_results = await asyncio.gather(
+            *[translate_one_lang(lang) for lang in target_languages]
+        )
+
         results: List[TranslatedContentItem] = []
-
-        for target_lang in target_languages:
-            translated_body, provider_used, _ = await cls.translate_text(
-                text=source_text,
-                source_lang=source_lang_code,
-                target_lang=target_lang.code,
-                campaign_objective=campaign.objective or campaign.name,
-                provider_override=req.provider
-            )
-
-            # Localize subject line
-            translated_subject, _, _ = await cls.translate_text(
-                text=source_subject,
-                source_lang=source_lang_code,
-                target_lang=target_lang.code,
-                campaign_objective=campaign.objective or campaign.name,
-                provider_override=req.provider
-            )
-
+        for target_lang, translated_body, translated_subject, provider_used in translation_results:
             # Check if translation already exists for (campaign_id, language_id, channel)
             existing = db.query(CampaignContent).filter(
                 CampaignContent.campaign_id == campaign_id,
@@ -192,14 +217,14 @@ class TranslationService:
                     language_name=target_lang.name,
                     channel=channel,
                     subject=saved_item.subject,
-                    title=saved_item.title,
+                    title=saved_item.title or campaign.name,
                     body=saved_item.body,
                     character_count=len(saved_item.body),
                     ai_generated=saved_item.ai_generated,
                     version=saved_item.version or 1,
                     status=saved_item.status,
                     provider_used=provider_used,
-                    created_at=saved_item.created_at
+                    created_at=saved_item.created_at or datetime.utcnow()
                 )
             )
 
@@ -223,10 +248,10 @@ class TranslationService:
         provider_override: Optional[str] = None
     ) -> Tuple[str, str, str]:
         """
-        Translates text with cascading fallback hierarchy:
-        1. Bhashini (if configured or requested)
-        2. AI4Bharat IndicTrans2 via Hugging Face (if configured or requested)
-        3. Google Gemini Indic Translation (high-quality Indian language translation)
+        Translates text with cascading fast-fallback hierarchy:
+        1. Bhashini (if configured, not tripped)
+        2. AI4Bharat IndicTrans2 via Hugging Face (if configured, not tripped)
+        3. Google Gemini Indic Translation (if configured, not tripped)
         4. Offline High-Fidelity Indic Domain Engine (guaranteed zero downtime)
         """
         source_code = source_lang.lower()
@@ -238,39 +263,45 @@ class TranslationService:
         chosen_provider = (provider_override or settings.TRANSLATION_PROVIDER or "auto").lower()
 
         # 1. BHASHINI API
-        if chosen_provider in ["bhashini", "auto"]:
+        if chosen_provider in ["bhashini", "auto"] and not _is_circuit_open("bhashini"):
             if settings.BHASHINI_USER_ID and settings.BHASHINI_API_KEY:
                 try:
                     translated, prov, model = await cls._translate_bhashini(text, source_code, target_code)
                     return translated, prov, model
                 except Exception as exc:
                     logger.warning(f"Bhashini API translation failed: {exc}. Falling back to next provider.")
+                    _trip_circuit("bhashini", 120.0)
             elif chosen_provider == "bhashini":
                 logger.info("Bhashini requested but credentials not yet configured. Falling back...")
 
         # 2. AI4BHARAT INDICTRANS2 (via Hugging Face)
-        if chosen_provider in ["indictrans2", "auto"]:
-            if settings.HUGGINGFACE_API_KEY:
+        if chosen_provider in ["indictrans2", "auto"] and not _is_circuit_open("indictrans2"):
+            if settings.HUGGINGFACE_API_KEY and settings.HUGGINGFACE_API_KEY.strip():
                 try:
                     translated, prov, model = await cls._translate_indictrans2(text, source_code, target_code)
                     return translated, prov, model
                 except Exception as exc:
-                    logger.warning(f"AI4Bharat IndicTrans2 failed: {exc}. Falling back to LLM...")
+                    logger.warning(f"AI4Bharat IndicTrans2 failed: {exc}. Falling back...")
+                    _trip_circuit("indictrans2", 180.0)
 
         # 3. LLM INDIC TRANSLATION (Gemini Flash / Groq)
-        if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip():
-            try:
-                translated, prov, model = await cls._translate_gemini(text, source_code, target_code)
-                return translated, prov, model
-            except Exception as exc:
-                logger.warning(f"Gemini Indic translation failed: {exc}. Falling back to domain engine.")
+        if chosen_provider in ["gemini", "auto"] and not _is_circuit_open("gemini"):
+            if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip():
+                try:
+                    translated, prov, model = await cls._translate_gemini(text, source_code, target_code)
+                    return translated, prov, model
+                except Exception as exc:
+                    logger.warning(f"Gemini Indic translation failed: {exc}. Falling back...")
+                    _trip_circuit("gemini", 180.0)
 
-        if settings.GROQ_API_KEY and settings.GROQ_API_KEY.strip():
-            try:
-                translated, prov, model = await cls._translate_groq(text, source_code, target_code)
-                return translated, prov, model
-            except Exception as exc:
-                logger.warning(f"Groq Indic translation failed: {exc}. Falling back to domain engine.")
+        if chosen_provider in ["groq", "auto"] and not _is_circuit_open("groq"):
+            if settings.GROQ_API_KEY and settings.GROQ_API_KEY.strip():
+                try:
+                    translated, prov, model = await cls._translate_groq(text, source_code, target_code)
+                    return translated, prov, model
+                except Exception as exc:
+                    logger.warning(f"Groq Indic translation failed: {exc}. Falling back...")
+                    _trip_circuit("groq", 120.0)
 
         # 4. DETERMINISTIC INDIC DOMAIN ENGINE (Offline zero-failure fallback)
         translated = cls._translate_offline(text, campaign_objective, target_code)
@@ -283,10 +314,7 @@ class TranslationService:
         source_code: str,
         target_code: str
     ) -> Tuple[str, str, str]:
-        """
-        Bhashini (National Language Translation Mission) ULCA pipeline endpoint.
-        Sign up at https://bhashini.gov.in / ulca portal for user credentials.
-        """
+        """Bhashini (National Language Translation Mission) ULCA pipeline endpoint."""
         url = "https://dhruva-api.bhashini.gov.in/services/inference/pipeline"
         headers = {
             "Accept": "*/*",
@@ -311,15 +339,11 @@ class TranslationService:
                 }
             ],
             "inputData": {
-                "input": [
-                    {
-                        "source": text
-                    }
-                ]
+                "input": [{"source": text}]
             }
         }
 
-        async with httpx.AsyncClient(timeout=20.0) as client:
+        async with httpx.AsyncClient(timeout=3.5) as client:
             resp = await client.post(url, headers=headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -333,30 +357,18 @@ class TranslationService:
         source_code: str,
         target_code: str
     ) -> Tuple[str, str, str]:
-        """
-        AI4Bharat IndicTrans2 model via Hugging Face Inference API.
-        Model: ai4bharat/indictrans2-en-indic-1B
-        """
+        """AI4Bharat IndicTrans2 model via Hugging Face Inference API."""
         url = "https://api-inference.huggingface.co/models/ai4bharat/indictrans2-en-indic-1B"
         headers = {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {settings.HUGGINGFACE_API_KEY}"
         }
-        if settings.HUGGINGFACE_API_KEY:
-            headers["Authorization"] = f"Bearer {settings.HUGGINGFACE_API_KEY}"
 
-        # Language script mapper for IndicTrans2
         script_map = {
-            "hi": "hin_Deva",
-            "kn": "kan_Knda",
-            "ta": "tam_Taml",
-            "te": "tel_Telu",
-            "mr": "mar_Deva",
-            "bn": "ben_Beng",
-            "gu": "guj_Gujr",
-            "pa": "pan_Guru",
-            "ml": "mal_Mlym",
-            "or": "ory_Orya",
-            "en": "eng_Latn"
+            "hi": "hin_Deva", "kn": "kan_Knda", "ta": "tam_Taml",
+            "te": "tel_Telu", "mr": "mar_Deva", "bn": "ben_Beng",
+            "gu": "guj_Gujr", "pa": "pan_Guru", "ml": "mal_Mlym",
+            "or": "ory_Orya", "en": "eng_Latn"
         }
 
         src_script = script_map.get(source_code, f"{source_code}_Latn")
@@ -370,7 +382,7 @@ class TranslationService:
             }
         }
 
-        async with httpx.AsyncClient(timeout=25.0) as client:
+        async with httpx.AsyncClient(timeout=3.5) as client:
             resp = await client.post(url, headers=headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -401,20 +413,12 @@ class TranslationService:
         prompt = f"{system_instruction}\n\nText to translate:\n{text}"
 
         candidate_models = [
-            settings.GEMINI_MODEL,
+            settings.GEMINI_MODEL or "gemini-3.8-flash",
             "gemini-2.5-flash",
-            "gemini-3.6-flash",
-            "gemini-flash-latest",
-            "gemini-1.5-flash"
         ]
-        candidate_models = list(dict.fromkeys([m for m in candidate_models if m]))
 
         payload = {
-            "contents": [
-                {
-                    "parts": [{"text": prompt}]
-                }
-            ],
+            "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.3,
                 "maxOutputTokens": 400
@@ -422,7 +426,7 @@ class TranslationService:
         }
 
         last_error = None
-        async with httpx.AsyncClient(timeout=25.0) as client:
+        async with httpx.AsyncClient(timeout=3.5) as client:
             for model in candidate_models:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={settings.GEMINI_API_KEY}"
                 try:
@@ -431,17 +435,16 @@ class TranslationService:
                         data = response.json()
                         candidate = data["candidates"][0]["content"]["parts"][0]["text"]
                         return candidate.strip(), "Google Gemini Indic Engine", model
-                    elif response.status_code == 404:
-                        continue
                     else:
-                        response.raise_for_status()
+                        last_error = RuntimeError(f"Gemini error {response.status_code}")
+                        break
                 except Exception as e:
                     last_error = e
-                    continue
+                    break
 
         if last_error:
             raise last_error
-        raise RuntimeError("Gemini Indic translation failed on all models.")
+        raise RuntimeError("Gemini Indic translation unavailable.")
 
     @classmethod
     async def _translate_groq(
@@ -468,7 +471,7 @@ class TranslationService:
             "max_tokens": 400
         }
 
-        async with httpx.AsyncClient(timeout=20.0) as client:
+        async with httpx.AsyncClient(timeout=3.5) as client:
             res = await client.post(url, headers=headers, json=payload)
             res.raise_for_status()
             data = res.json()
@@ -478,10 +481,56 @@ class TranslationService:
     def _translate_offline(cls, text: str, objective: str, target_lang: str) -> str:
         """
         High-fidelity realistic fallback for Indian languages ensuring zero failure.
-        Covers corona, dengue, floods, vaccines, heatwave, utilities, traffic, and general civic advisories.
+        Handles both concise subject titles and full broadcast notices.
         """
+        tgt = (target_lang or "hi").lower().strip()
+
+        # Subject / Title localization if text is concise (< 120 chars)
+        if len(text.strip()) < 120:
+            subj_clean = text.strip()
+            lower = subj_clean.lower()
+            if "flood" in lower:
+                subject_map = {
+                    "hi": "बाढ़ सतर्कता चेतावनी: ब्रह्मपुत्र एवं प्रमुख नदियों का जलस्तर खतरे के निशान से ऊपर",
+                    "kn": "ಪ್ರವಾಹ ಮುನ್ನೆಚ್ಚರಿಕೆ: ಬ್ರಹ್ಮಪುತ್ರ ಹಾಗೂ ನದಿಗಳ ಅಪಾಯ ಮಟ್ಟ ಮೀರಿದೆ, ಜಾಗರೂಕರಾಗಿರಿ",
+                    "ta": "வெள்ள அபாய எச்சரிக்கை: பிரம்மபுத்திரா உள்ளிட்ட நதிகளில் நீர்மட்டம் உயர்வு",
+                    "te": "వరద ముందస్తు హెచ్చరిక: నదుల నీటిమట్టం ప్రమాద స్థాయిని దాటింది",
+                    "mr": "पूर सतर्कता इशारा: प्रमुख नद्या धोक्याच्या पातळीवरून वाहत आहेत, सतर्क राहा",
+                    "bn": "বন্যা সতর্কতা: নদীর জলস্তর বিপৎসীমার উপরে প্রবাহিত হচ্ছে",
+                    "gu": "પૂર ચેતવણી: નદીઓ ભયજનક સપાટી વટાવી રહી છે, સાવધ રહો",
+                    "pa": "ਹੜ੍ਹ ਚੇਤਾਵਨੀ: ਦਰਿਆਵਾਂ ਦਾ ਪਾਣੀ ਖ਼ਤਰੇ ਦੇ ਨਿਸ਼ਾਨ ਤੋਂ ਉੱਪਰ",
+                    "ml": "പ്രളയ മുന്നറിയിപ്പ്: നദികളിൽ ജലനിരപ്പ് അപകടനില കവിഞ്ഞു",
+                    "or": "ବନ୍ୟା ସତର୍କତା: ନଦୀର ଜଳସ୍ତର ବିପଦ ସଙ୍କେତ ଟପିଛି",
+                }
+                return subject_map.get(tgt, f"Alert ({tgt.upper()}): {subj_clean}")
+            elif "dengue" in lower:
+                subject_map = {
+                    "hi": "स्वास्थ्य परामर्श: डेंगू एवं संक्रामक रोगों से बचाव हेतु आवश्यक दिशानिर्देश",
+                    "kn": "ಆರೋಗ್ಯ ಎಚ್ಚರಿಕೆ: ಡೆಂಗ್ಯೂ ತಡೆಗಟ್ಟುವಿಕೆ ಕುರಿತು ಮುನ್ನೆಚ್ಚರಿಕೆಗಳು",
+                    "ta": "சுகாதார வழிகாட்டுதல்: டெங்கு பரவலை தடுக்கும் வழிமுறைகள்",
+                    "te": "ఆరోగ్య సూచన: డెंग్యూ నివారణకు తీసుకోవాల్సిన జాగ్రత్తలు",
+                    "mr": "आरोग्य सल्ला: डेंग्यू व डास प्रतिबंधात्मक उपाययोजना",
+                }
+                return subject_map.get(tgt, f"Advisory ({tgt.upper()}): {subj_clean}")
+            else:
+                prefix_map = {
+                    "hi": "सार्वजनिक सूचना: ",
+                    "kn": "ಸಾರ್ವಜನಿಕ ಪ್ರಕಟಣೆ: ",
+                    "ta": "பொது அறிவிப்பு: ",
+                    "te": "ప్రజా ప్రకటన: ",
+                    "mr": "सार्वजनिक सूचना: ",
+                    "bn": "জনস্বার্থে বিজ্ঞপ্তি: ",
+                    "gu": "જાહેર સૂચના: ",
+                    "pa": "ਜਨਤਕ ਸੂਚਨਾ: ",
+                    "ml": "പൊതു അറിയിപ്പ്: ",
+                    "or": "ସର୍ବସାଧାରଣ ସୂଚନା: ",
+                }
+                prefix = prefix_map.get(tgt, "NOTICE: ")
+                return f"{prefix}{subj_clean}"
+
+        # Body message localization
         from app.services.multilingual_content import get_multilingual_message
-        topic_to_use = objective or text[:80]
+        topic_to_use = objective or text[:120]
         return get_multilingual_message(
             topic=topic_to_use,
             language=target_lang,

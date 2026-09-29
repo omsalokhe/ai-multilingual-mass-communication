@@ -92,7 +92,7 @@ export default function CampaignPipeline() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar
           title="Loading…"
           crumbs={[
@@ -100,7 +100,7 @@ export default function CampaignPipeline() {
             { label: "Campaign" },
           ]}
         />
-        <div className="p-6 md:p-8">
+        <div className="p-6 md:p-8 overflow-y-auto">
           <LoadingSkeleton type="detail" />
         </div>
       </div>
@@ -109,7 +109,7 @@ export default function CampaignPipeline() {
 
   if (!campaign) {
     return (
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar
           title="Not Found"
           crumbs={[
@@ -133,7 +133,7 @@ export default function CampaignPipeline() {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar
         title={campaign.name}
         crumbs={[
@@ -142,7 +142,7 @@ export default function CampaignPipeline() {
         ]}
       />
 
-      <div className="flex-1 p-6 md:p-8 space-y-6 overflow-auto">
+      <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
         {/* Back button */}
         <button
           onClick={() => navigate("/")}
