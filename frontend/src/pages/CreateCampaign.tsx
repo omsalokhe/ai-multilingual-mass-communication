@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, Calendar, Loader2 } from "lucide-react";
 import TopBar from "../components/TopBar";
 import { useToast } from "../components/Toast";
@@ -18,16 +18,27 @@ const PRIORITIES = ["LOW", "NORMAL", "HIGH", "CRITICAL"];
 
 export default function CreateCampaign() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefill = location.state as {
+    name?: string;
+    description?: string;
+    priority?: string;
+    campaignTypeId?: number;
+    objective?: string;
+    contentBody?: string;
+    contentSubject?: string;
+  } | null;
+
   const { toast } = useToast();
   const [step, setStep] = useState(0);
-  const [campaignName, setCampaignName] = useState("");
-  const [campaignTypeId, setCampaignTypeId] = useState(1);
-  const [priority, setPriority] = useState("NORMAL");
-  const [description, setDescription] = useState("");
-  const [objective, setObjective] = useState("");
+  const [campaignName, setCampaignName] = useState(prefill?.name || "");
+  const [campaignTypeId, setCampaignTypeId] = useState(prefill?.campaignTypeId || 2);
+  const [priority, setPriority] = useState(prefill?.priority || "HIGH");
+  const [description, setDescription] = useState(prefill?.description || "");
+  const [objective, setObjective] = useState(prefill?.objective || prefill?.description || "");
   const [selectedSegments, setSelectedSegments] = useState<number[]>([]);
-  const [contentBody, setContentBody] = useState("");
-  const [contentSubject, setContentSubject] = useState("");
+  const [contentBody, setContentBody] = useState(prefill?.contentBody || "");
+  const [contentSubject, setContentSubject] = useState(prefill?.contentSubject || "");
   const [submitting, setSubmitting] = useState(false);
 
   // Fetch real segments from backend

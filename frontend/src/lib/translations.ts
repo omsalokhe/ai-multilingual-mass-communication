@@ -10,6 +10,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
   English: {
     // Nav & Common
     nav_dashboard: "Dashboard",
+    nav_crisis_monitor: "Crisis & Weather",
     nav_campaigns: "Campaigns",
     nav_audience: "Audience",
     nav_templates: "Content & Templates",

@@ -485,3 +485,35 @@ export interface AuthResponse {
   expires_in: number;
   user: AuthUser;
 }
+
+// ──────────────────────────────────────────────
+// Crisis & Weather Monitor types
+// ──────────────────────────────────────────────
+
+export interface CrisisNewsItem {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  link: string;
+  pub_date: string;
+  category: string;
+  severity: "CRITICAL" | "WARNING" | "ADVISORY";
+  region: string;
+  suggested_language: string;
+}
+
+export interface CrisisWeatherAlert {
+  id: string;
+  region: string;
+  state: string;
+  lat: number;
+  lon: number;
+  alert_level: "RED" | "ORANGE" | "YELLOW" | "GREEN";
+  condition: string;
+  rainfall_mm: number;
+  wind_kmh: number;
+  flood_risk_pct: number;
+  primary_language: string;
+  description: string;
+}

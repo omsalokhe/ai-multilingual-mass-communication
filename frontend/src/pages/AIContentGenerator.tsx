@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Sparkles, Copy, Save, Globe, Loader2, CheckCircle2, Send, X, MessageSquare, Smartphone, Mail, ExternalLink } from "lucide-react";
 import TopBar from "../components/TopBar";
 import { aiGenerate, sendTestMessage } from "../lib/api";
@@ -9,12 +10,20 @@ import { useToast } from "../components/Toast";
 export default function AIContentGenerator() {
   const { generalSettings } = useAppSettings();
   const { toast } = useToast();
+  const location = useLocation();
+  const prefill = location.state as {
+    topic?: string;
+    channel?: string;
+    tone?: string;
+    language?: string;
+    maxChars?: number;
+  } | null;
 
-  const [topic, setTopic] = useState("");
-  const [channel, setChannel] = useState("Email");
-  const [tone, setTone] = useState("Formal");
-  const [language, setLanguage] = useState(generalSettings.defaultLanguage);
-  const [maxChars, setMaxChars] = useState(500);
+  const [topic, setTopic] = useState(prefill?.topic || "");
+  const [channel, setChannel] = useState(prefill?.channel || "SMS");
+  const [tone, setTone] = useState(prefill?.tone || "Urgent");
+  const [language, setLanguage] = useState(prefill?.language || generalSettings.defaultLanguage);
+  const [maxChars, setMaxChars] = useState(prefill?.maxChars || 350);
   const [result, setResult] = useState<AIGenerateResponse | null>(null);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -22,14 +31,18 @@ export default function AIContentGenerator() {
 
   // Direct channel dispatch modal state
   const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [dispatchChannel, setDispatchChannel] = useState<"EMAIL" | "SMS" | "WHATSAPP">("EMAIL");
-  const [dispatchRecipient, setDispatchRecipient] = useState("citizen.alerts@domain.org");
+  const [dispatchChannel, setDispatchChannel] = useState<"EMAIL" | "SMS" | "WHATSAPP">("SMS");
+  const [dispatchRecipient, setDispatchRecipient] = useState("+91 9876543210");
   const [dispatchSending, setDispatchSending] = useState(false);
   const [dispatchReceipt, setDispatchReceipt] = useState<any>(null);
 
   useEffect(() => {
-    setLanguage(generalSettings.defaultLanguage);
-  }, [generalSettings.defaultLanguage]);
+    if (prefill?.language) {
+      setLanguage(prefill.language);
+    } else {
+      setLanguage(generalSettings.defaultLanguage);
+    }
+  }, [generalSettings.defaultLanguage, prefill?.language]);
 
   useEffect(() => {
     const chUpper = channel.toUpperCase();

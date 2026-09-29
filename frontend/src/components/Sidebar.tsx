@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useAppSettings } from "../context/AppSettingsContext";
 import {
   LayoutDashboard,
+  CloudLightning,
   Megaphone,
   Users,
   FileText,
@@ -19,6 +20,7 @@ import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
   { to: "/", icon: LayoutDashboard, key: "nav_dashboard", fallback: "Dashboard" },
+  { to: "/crisis-monitor", icon: CloudLightning, key: "nav_crisis_monitor", fallback: "Crisis & Weather" },
   { to: "/campaigns", icon: Megaphone, key: "nav_campaigns", fallback: "Campaigns" },
   { to: "/audience", icon: Users, key: "nav_audience", fallback: "Audience" },
   { to: "/content-templates", icon: FileText, key: "nav_templates", fallback: "Content & Templates" },

@@ -18,6 +18,7 @@ import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import AIContentGenerator from "./pages/AIContentGenerator";
+import CrisisMonitor from "./pages/CrisisMonitor";
 
 function DashboardLayout() {
   const { generalSettings } = useAppSettings();
@@ -29,6 +30,7 @@ function DashboardLayout() {
       <main className="flex-1 flex flex-col overflow-hidden">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/crisis-monitor" element={<CrisisMonitor />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/campaigns/create" element={<CreateCampaign />} />
           <Route path="/campaigns/:id" element={<CampaignPipeline />} />
