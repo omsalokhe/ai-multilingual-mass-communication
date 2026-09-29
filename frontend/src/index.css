@@ -247,7 +247,9 @@ body {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
 }
 
-/* ── Dark Mode Theme ─────────────────────────── */
+/* ═══════════════════════════════════════════════
+   DARK MODE
+   ═══════════════════════════════════════════════ */
 
 html {
   transition: background-color 0.3s ease, color 0.3s ease;
@@ -255,7 +257,17 @@ html {
 
 html.dark body {
   background-color: #0f172a;
-  color: #e2e8f0;
+  color: #ffffff;
+}
+
+/* Force ALL text to white in dark mode */
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark .text-slate-300 {
+  color: #ffffff !important;
 }
 
 /* Scrollbar – dark */
@@ -271,7 +283,7 @@ html.dark .card-hover:hover {
   box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3), 0 4px 10px -6px rgba(0, 0, 0, 0.2);
 }
 
-/* Chart tooltip – dark */
+/* Chart tooltip – dark (inverted) */
 html.dark .chart-tooltip {
   background: #f1f5f9;
   color: #0f172a;
@@ -286,10 +298,10 @@ html.dark .tab-active {
   border-bottom-color: #60a5fa;
 }
 html.dark .tab-inactive {
-  color: #94a3b8;
+  color: #ffffff;
 }
 html.dark .tab-inactive:hover {
-  color: #cbd5e1;
+  color: #ffffff;
   border-bottom-color: #334155;
 }
 
@@ -299,7 +311,7 @@ html.dark .input-focus:focus {
   box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
 }
 
-/* Status dot – dark (unchanged colors, just adjusted glow) */
+/* Status dot – dark */
 html.dark .status-connected {
   box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
 }
@@ -307,7 +319,7 @@ html.dark .status-disconnected {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
 }
 
-/* ── Dark Mode Toggle Button Animation ───────── */
+/* ── Dark Mode Toggle Animation ──────────────── */
 
 @keyframes theme-icon-in {
   from {
@@ -325,22 +337,15 @@ html.dark .status-disconnected {
 }
 
 /* ── Global Dark Mode Overrides ──────────────── */
-/* These automatically restyle pages that use common 
-   Tailwind utility classes without editing each file */
 
 /* White cards → dark slate */
 html.dark .bg-white {
   background-color: #1e293b !important;
-  color: #e2e8f0;
+  color: #ffffff;
 }
 
-html.dark .bg-slate-50,
-html.dark .bg-\[\\#F8FAFC\] {
+html.dark .bg-slate-50 {
   background-color: #0f172a !important;
-}
-
-html.dark .bg-slate-50\/50 {
-  background-color: rgba(15, 23, 42, 0.5) !important;
 }
 
 /* Borders */
@@ -354,34 +359,17 @@ html.dark .border-slate-50 {
   border-color: #1e293b !important;
 }
 
-/* Text overrides – soft, readable tones */
-html.dark .text-slate-800 {
-  color: #f1f5f9 !important;
-}
-html.dark .text-slate-700 {
-  color: #e2e8f0 !important;
-}
-html.dark .text-slate-600 {
-  color: #cbd5e1 !important;
-}
-html.dark .text-slate-500 {
-  color: #94a3b8 !important;
-}
-html.dark .text-slate-400 {
-  color: #8892a6 !important;
-}
-
-/* Inputs & selects */
+/* Inputs & selects – white text */
 html.dark input,
 html.dark select,
 html.dark textarea {
   background-color: #1e293b;
   border-color: #475569;
-  color: #e2e8f0;
+  color: #ffffff;
 }
 html.dark input::placeholder,
 html.dark textarea::placeholder {
-  color: #7a859b;
+  color: rgba(255, 255, 255, 0.45);
 }
 html.dark input:focus,
 html.dark select:focus,
@@ -390,9 +378,12 @@ html.dark textarea:focus {
   box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
 }
 
-/* Tables */
+/* Tables – white text */
 html.dark th {
-  color: #b0bac9 !important;
+  color: #ffffff !important;
+}
+html.dark td {
+  color: #ffffff !important;
 }
 html.dark tr {
   border-color: #1e293b;
@@ -406,13 +397,7 @@ html.dark .hover\:bg-slate-50:hover {
   background-color: rgba(51, 65, 85, 0.5) !important;
 }
 
-/* Gradient accent cards keep their colors */
-html.dark .bg-gradient-to-br,
-html.dark .bg-gradient-to-r {
-  /* preserve gradient backgrounds */
-}
-
-/* Blue accent adjustments */
+/* Accent bg adjustments */
 html.dark .bg-blue-50 {
   background-color: rgba(59, 130, 246, 0.1) !important;
 }
@@ -438,22 +423,13 @@ html.dark .bg-orange-50 {
   background-color: rgba(249, 115, 22, 0.1) !important;
 }
 
-/* Ring / shadow adjustments */
+/* Shadow adjustments */
 html.dark .shadow-sm {
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
 }
 
-/* Select option dark bg (for browsers that support it) */
+/* Select option dark bg */
 html.dark option {
   background-color: #1e293b;
-  color: #e2e8f0;
-}
-
-/* Smooth global transition for theme changes */
-html.dark *,
-html.dark *::before,
-html.dark *::after {
-  transition-property: background-color, border-color, color;
-  transition-duration: 0.15s;
-  transition-timing-function: ease;
+  color: #ffffff;
 }
