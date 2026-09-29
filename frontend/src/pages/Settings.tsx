@@ -16,6 +16,7 @@ const SETTINGS_TABS = [
 export default function Settings() {
   const { profile, generalSettings, updateProfile, updateDefaultLanguage, updateTimezone, toggleDarkMode } = useAppSettings();
   const { toast } = useToast();
+  const isDark = generalSettings.darkMode;
 
   const [activeTab, setActiveTab] = useState("Profile");
   const [fullName, setFullName] = useState(profile.fullName);
@@ -46,31 +47,50 @@ export default function Settings() {
     setTimeout(() => setSaved(false), 2500);
   };
 
+  // Reusable class helpers
+  const cardBg = isDark ? "bg-slate-800/80 border-slate-700" : "bg-white border-slate-200";
+  const headingText = isDark ? "text-slate-100" : "text-slate-800";
+  const subText = isDark ? "text-slate-400" : "text-slate-500";
+  const labelText = isDark ? "text-slate-300" : "text-slate-600";
+  const inputCls = isDark
+    ? "bg-slate-700/60 border-slate-600 text-slate-200 placeholder:text-slate-500 input-focus"
+    : "bg-white border-slate-200 text-slate-800 input-focus";
+  const rowBorder = isDark ? "border-slate-700" : "border-slate-200";
+  const rowItemText = isDark ? "text-slate-200" : "text-slate-700";
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar />
 
       <div className="flex-1 overflow-y-auto p-6 md:p-8">
         <div className="animate-fade-in mb-6">
-          <h1 className="text-xl font-bold text-slate-800">Settings</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage your account and platform settings.</p>
+          <h1 className={`text-xl font-bold ${headingText}`}>Settings</h1>
+          <p className={`text-sm mt-1 ${subText}`}>Manage your account and platform settings.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Tab navigation */}
           <div className="lg:col-span-1">
-            <nav className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <nav className={`rounded-xl border overflow-hidden ${cardBg}`}>
               {SETTINGS_TABS.map((tab) => (
                 <button
                   key={tab.label}
                   onClick={() => setActiveTab(tab.label)}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all border-l-3 ${
                     activeTab === tab.label
-                      ? "bg-blue-50 text-blue-700 border-blue-600"
-                      : "text-slate-600 border-transparent hover:bg-slate-50"
+                      ? isDark
+                        ? "bg-blue-500/15 text-blue-400 border-blue-500"
+                        : "bg-blue-50 text-blue-700 border-blue-600"
+                      : isDark
+                        ? "text-slate-400 border-transparent hover:bg-slate-700/50"
+                        : "text-slate-600 border-transparent hover:bg-slate-50"
                   }`}
                 >
-                  <tab.icon size={16} className={activeTab === tab.label ? "text-blue-600" : "text-slate-400"} />
+                  <tab.icon size={16} className={
+                    activeTab === tab.label
+                      ? isDark ? "text-blue-400" : "text-blue-600"
+                      : isDark ? "text-slate-500" : "text-slate-400"
+                  } />
                   {tab.label}
                 </button>
               ))}
@@ -80,23 +100,31 @@ export default function Settings() {
           {/* Content */}
           <div className="lg:col-span-3">
             {activeTab === "Profile" && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 animate-fade-in">
-                <h2 className="text-sm font-bold text-slate-800 mb-6">Profile Information</h2>
+              <div className={`rounded-xl border p-6 animate-fade-in ${cardBg}`}>
+                <h2 className={`text-sm font-bold mb-6 ${headingText}`}>Profile Information</h2>
 
                 {/* Avatar */}
-                <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+                <div className={`flex items-center gap-4 mb-6 pb-6 border-b ${isDark ? "border-slate-700/60" : "border-slate-100"}`}>
                   <div className="relative">
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-md">
                       {profile.avatarInitials}
                     </div>
-                    <button className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm hover:bg-slate-50 transition-colors">
-                      <Camera size={12} className="text-slate-500" />
+                    <button className={`absolute bottom-0 right-0 w-7 h-7 rounded-full border flex items-center justify-center shadow-sm transition-colors ${
+                      isDark
+                        ? "bg-slate-700 border-slate-600 hover:bg-slate-600"
+                        : "bg-white border-slate-200 hover:bg-slate-50"
+                    }`}>
+                      <Camera size={12} className={isDark ? "text-slate-300" : "text-slate-500"} />
                     </button>
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-800">{profile.fullName}</h3>
-                    <p className="text-xs text-slate-500">{profile.role}</p>
-                    <span className="inline-flex items-center gap-1 mt-1 text-[11px] text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                    <h3 className={`text-base font-bold ${headingText}`}>{profile.fullName}</h3>
+                    <p className={`text-xs ${subText}`}>{profile.role}</p>
+                    <span className={`inline-flex items-center gap-1 mt-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${
+                      isDark
+                        ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                        : "text-emerald-600 bg-emerald-50 border-emerald-100"
+                    }`}>
                       <CheckCircle2 size={11} /> Active Administrator
                     </span>
                   </div>
@@ -105,54 +133,54 @@ export default function Settings() {
                 {/* Form */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Full Name</label>
+                    <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>Full Name</label>
                     <input
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Om salokhe"
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus"
+                      className={`w-full px-3 py-2.5 rounded-lg border text-sm ${inputCls}`}
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Role</label>
+                    <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>Role</label>
                     <input
                       type="text"
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus bg-slate-50"
+                      className={`w-full px-3 py-2.5 rounded-lg border text-sm ${inputCls} ${isDark ? "" : "bg-slate-50"}`}
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Email Address</label>
+                    <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>Email Address</label>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus"
+                      className={`w-full px-3 py-2.5 rounded-lg border text-sm ${inputCls}`}
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Phone Number</label>
+                    <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>Phone Number</label>
                     <input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus"
+                      className={`w-full px-3 py-2.5 rounded-lg border text-sm ${inputCls}`}
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Organization</label>
+                    <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>Organization</label>
                     <input
                       type="text"
                       value={organization}
                       onChange={(e) => setOrganization(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus"
+                      className={`w-full px-3 py-2.5 rounded-lg border text-sm ${inputCls}`}
                     />
                   </div>
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
+                <div className={`mt-6 pt-6 border-t flex items-center justify-between ${isDark ? "border-slate-700/60" : "border-slate-100"}`}>
                   <button
                     onClick={handleSave}
                     className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
@@ -170,31 +198,41 @@ export default function Settings() {
             )}
 
             {activeTab === "Account" && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 animate-fade-in">
-                <h2 className="text-sm font-bold text-slate-800 mb-4">Account Settings</h2>
+              <div className={`rounded-xl border p-6 animate-fade-in ${cardBg}`}>
+                <h2 className={`text-sm font-bold mb-4 ${headingText}`}>Account Settings</h2>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${rowBorder}`}>
                     <div>
-                      <h3 className="text-sm font-medium text-slate-700">Two-Factor Authentication</h3>
-                      <p className="text-xs text-slate-500">Add an extra layer of security to your account.</p>
+                      <h3 className={`text-sm font-medium ${rowItemText}`}>Two-Factor Authentication</h3>
+                      <p className={`text-xs ${subText}`}>Add an extra layer of security to your account.</p>
                     </div>
-                    <button className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                    <button className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                      isDark
+                        ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                        : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}>
                       Enable
                     </button>
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${rowBorder}`}>
                     <div>
-                      <h3 className="text-sm font-medium text-slate-700">Session Management</h3>
-                      <p className="text-xs text-slate-500">Manage your active sessions across devices.</p>
+                      <h3 className={`text-sm font-medium ${rowItemText}`}>Session Management</h3>
+                      <p className={`text-xs ${subText}`}>Manage your active sessions across devices.</p>
                     </div>
-                    <button className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                    <button className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                      isDark
+                        ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                        : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}>
                       View Sessions
                     </button>
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-red-100 bg-red-50">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                    isDark ? "border-red-500/30 bg-red-500/10" : "border-red-100 bg-red-50"
+                  }`}>
                     <div>
-                      <h3 className="text-sm font-medium text-red-700">Delete Account</h3>
-                      <p className="text-xs text-red-500">Permanently delete your account and all data.</p>
+                      <h3 className={`text-sm font-medium ${isDark ? "text-red-400" : "text-red-700"}`}>Delete Account</h3>
+                      <p className={`text-xs ${isDark ? "text-red-400/70" : "text-red-500"}`}>Permanently delete your account and all data.</p>
                     </div>
                     <button className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition-colors">
                       Delete
@@ -205,20 +243,20 @@ export default function Settings() {
             )}
 
             {activeTab === "Security" && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 animate-fade-in">
-                <h2 className="text-sm font-bold text-slate-800 mb-4">Security Settings</h2>
+              <div className={`rounded-xl border p-6 animate-fade-in ${cardBg}`}>
+                <h2 className={`text-sm font-bold mb-4 ${headingText}`}>Security Settings</h2>
                 <div className="space-y-5">
                   <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Current Password</label>
-                    <input type="password" className="w-full max-w-md px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus" />
+                    <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>Current Password</label>
+                    <input type="password" className={`w-full max-w-md px-3 py-2.5 rounded-lg border text-sm ${inputCls}`} />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">New Password</label>
-                    <input type="password" className="w-full max-w-md px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus" />
+                    <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>New Password</label>
+                    <input type="password" className={`w-full max-w-md px-3 py-2.5 rounded-lg border text-sm ${inputCls}`} />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Confirm New Password</label>
-                    <input type="password" className="w-full max-w-md px-3 py-2.5 rounded-lg border border-slate-200 text-sm input-focus" />
+                    <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>Confirm New Password</label>
+                    <input type="password" className={`w-full max-w-md px-3 py-2.5 rounded-lg border text-sm ${inputCls}`} />
                   </div>
                   <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                     <Save size={14} />
@@ -229,14 +267,16 @@ export default function Settings() {
             )}
 
             {activeTab === "General Settings" && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 animate-fade-in">
-                <h2 className="text-sm font-bold text-slate-800 mb-4">General Settings</h2>
+              <div className={`rounded-xl border p-6 animate-fade-in ${cardBg}`}>
+                <h2 className={`text-sm font-bold mb-4 ${headingText}`}>General Settings</h2>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${rowBorder}`}>
                     <div>
-                      <h3 className="text-sm font-medium text-slate-700">Default Language</h3>
-                      <p className="text-xs text-slate-500">Set the default language across content generation and campaigns.</p>
-                      <span className="inline-block mt-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                      <h3 className={`text-sm font-medium ${rowItemText}`}>Default Language</h3>
+                      <p className={`text-xs ${subText}`}>Set the default language across content generation and campaigns.</p>
+                      <span className={`inline-block mt-1 text-[11px] font-medium px-2 py-0.5 rounded ${
+                        isDark ? "text-blue-400 bg-blue-500/10" : "text-blue-600 bg-blue-50"
+                      }`}>
                         Currently Active: {generalSettings.defaultLanguage}
                       </span>
                     </div>
@@ -247,7 +287,11 @@ export default function Settings() {
                         updateDefaultLanguage(newLang);
                         toast("success", `Default language set to ${newLang}. Content templates and generator will default to this language.`);
                       }}
-                      className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium bg-white input-focus cursor-pointer min-w-[160px]"
+                      className={`px-3 py-2 rounded-lg border text-xs font-medium input-focus cursor-pointer min-w-[160px] ${
+                        isDark
+                          ? "bg-slate-700 border-slate-600 text-slate-200"
+                          : "bg-white border-slate-200"
+                      }`}
                     >
                       <option value="English">English</option>
                       <option value="Hindi">Hindi (हिन्दी)</option>
@@ -257,10 +301,10 @@ export default function Settings() {
                       <option value="Telugu">Telugu (తెలుగు)</option>
                     </select>
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${rowBorder}`}>
                     <div>
-                      <h3 className="text-sm font-medium text-slate-700">Timezone</h3>
-                      <p className="text-xs text-slate-500">Set your timezone for scheduling campaigns.</p>
+                      <h3 className={`text-sm font-medium ${rowItemText}`}>Timezone</h3>
+                      <p className={`text-xs ${subText}`}>Set your timezone for scheduling campaigns.</p>
                     </div>
                     <select
                       value={generalSettings.timezone}
@@ -268,7 +312,11 @@ export default function Settings() {
                         updateTimezone(e.target.value);
                         toast("info", `Timezone updated to ${e.target.value}`);
                       }}
-                      className="px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white input-focus cursor-pointer"
+                      className={`px-3 py-2 rounded-lg border text-xs input-focus cursor-pointer ${
+                        isDark
+                          ? "bg-slate-700 border-slate-600 text-slate-200"
+                          : "bg-white border-slate-200"
+                      }`}
                     >
                       <option value="Asia/Kolkata (IST)">Asia/Kolkata (IST)</option>
                       <option value="UTC">UTC</option>
@@ -276,18 +324,18 @@ export default function Settings() {
                       <option value="Europe/London (GMT)">Europe/London (GMT)</option>
                     </select>
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${rowBorder}`}>
                     <div>
-                      <h3 className="text-sm font-medium text-slate-700">Dark Mode</h3>
-                      <p className="text-xs text-slate-500">Switch between light and dark themes.</p>
+                      <h3 className={`text-sm font-medium ${rowItemText}`}>Dark Mode</h3>
+                      <p className={`text-xs ${subText}`}>Switch between light and dark themes.</p>
                     </div>
                     <button
                       onClick={() => {
                         toggleDarkMode();
-                        toast("info", !generalSettings.darkMode ? "Dark mode preference saved" : "Light theme active");
+                        toast("info", !generalSettings.darkMode ? "Dark mode activated 🌙" : "Light mode activated ☀️");
                       }}
                       className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer ${
-                        generalSettings.darkMode ? "bg-blue-600" : "bg-slate-200"
+                        generalSettings.darkMode ? "bg-blue-600" : isDark ? "bg-slate-600" : "bg-slate-200"
                       }`}
                     >
                       <span
@@ -302,8 +350,8 @@ export default function Settings() {
             )}
 
             {activeTab === "Notification Settings" && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 animate-fade-in">
-                <h2 className="text-sm font-bold text-slate-800 mb-4">Notification Settings</h2>
+              <div className={`rounded-xl border p-6 animate-fade-in ${cardBg}`}>
+                <h2 className={`text-sm font-bold mb-4 ${headingText}`}>Notification Settings</h2>
                 <div className="space-y-4">
                   {[
                     { title: "Campaign Completion", desc: "Get notified when a campaign finishes" },
@@ -311,12 +359,12 @@ export default function Settings() {
                     { title: "Quality Alerts", desc: "Get notified about content quality issues" },
                     { title: "Weekly Reports", desc: "Receive weekly engagement summaries" },
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 rounded-lg border border-slate-200">
+                    <div key={i} className={`flex items-center justify-between p-4 rounded-lg border ${rowBorder}`}>
                       <div>
-                        <h3 className="text-sm font-medium text-slate-700">{item.title}</h3>
-                        <p className="text-xs text-slate-500">{item.desc}</p>
+                        <h3 className={`text-sm font-medium ${rowItemText}`}>{item.title}</h3>
+                        <p className={`text-xs ${subText}`}>{item.desc}</p>
                       </div>
-                      <button className={`w-12 h-6 rounded-full relative transition-colors ${i < 2 ? "bg-blue-600" : "bg-slate-200"}`}>
+                      <button className={`w-12 h-6 rounded-full relative transition-colors ${i < 2 ? "bg-blue-600" : isDark ? "bg-slate-600" : "bg-slate-200"}`}>
                         <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${i < 2 ? "left-7" : "left-1"}`} />
                       </button>
                     </div>
@@ -326,8 +374,8 @@ export default function Settings() {
             )}
 
             {activeTab === "Connected Channels" && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 animate-fade-in">
-                <h2 className="text-sm font-bold text-slate-800 mb-4">Connected Channels</h2>
+              <div className={`rounded-xl border p-6 animate-fade-in ${cardBg}`}>
+                <h2 className={`text-sm font-bold mb-4 ${headingText}`}>Connected Channels</h2>
                 <div className="space-y-3">
                   {[
                     { name: "Email (SMTP)", status: true },
@@ -336,10 +384,10 @@ export default function Settings() {
                     { name: "Push Notifications", status: true },
                     { name: "Social Media", status: false },
                   ].map((ch, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 rounded-lg border border-slate-200">
+                    <div key={i} className={`flex items-center justify-between p-4 rounded-lg border ${rowBorder}`}>
                       <div className="flex items-center gap-3">
                         <span className={`status-dot ${ch.status ? "status-connected" : "status-disconnected"}`} />
-                        <span className="text-sm font-medium text-slate-700">{ch.name}</span>
+                        <span className={`text-sm font-medium ${rowItemText}`}>{ch.name}</span>
                       </div>
                       <span className={`text-xs font-medium ${ch.status ? "text-emerald-600" : "text-red-500"}`}>
                         {ch.status ? "Connected" : "Disconnected"}

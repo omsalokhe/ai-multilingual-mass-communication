@@ -5,6 +5,7 @@ import { AppSettingsProvider } from "./context/AppSettingsContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { useAppSettings } from "./context/AppSettingsContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Campaigns from "./pages/Campaigns";
@@ -19,8 +20,11 @@ import Settings from "./pages/Settings";
 import AIContentGenerator from "./pages/AIContentGenerator";
 
 function DashboardLayout() {
+  const { generalSettings } = useAppSettings();
+  const isDark = generalSettings.darkMode;
+
   return (
-    <div className="flex h-screen bg-[#F8FAFC]">
+    <div className={`flex h-screen transition-colors duration-300 ${isDark ? "bg-[#0f172a]" : "bg-[#F8FAFC]"}`}>
       <Sidebar />
       <main className="flex-1 flex flex-col overflow-hidden">
         <Routes>

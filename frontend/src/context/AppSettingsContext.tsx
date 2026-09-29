@@ -85,6 +85,15 @@ export const AppSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return DEFAULT_GENERAL_SETTINGS;
   });
 
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (generalSettings.darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [generalSettings.darkMode]);
+
   // Save changes to localStorage
   useEffect(() => {
     try {
