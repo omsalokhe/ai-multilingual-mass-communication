@@ -1,6 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --color-primary-50: #eff6ff;
@@ -245,6 +247,35 @@ body {
 .status-disconnected {
   background-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+/* ═══════════════════════════════════════════════
+   LIGHT MODE (High-contrast pure black text)
+   ═══════════════════════════════════════════════ */
+
+html:not(.dark) body {
+  background-color: #f8fafc;
+  color: #000000;
+}
+
+html:not(.dark) .text-slate-900,
+html:not(.dark) .text-slate-800,
+html:not(.dark) .text-slate-700,
+html:not(.dark) .text-slate-600,
+html:not(.dark) .text-slate-500,
+html:not(.dark) .text-slate-400 {
+  color: #000000 !important;
+}
+
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
+  color: #000000 !important;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: #64748b !important;
 }
 
 /* ═══════════════════════════════════════════════
