@@ -279,6 +279,55 @@ html:not(.dark) textarea::placeholder {
 }
 
 /* ═══════════════════════════════════════════════
+   AUTHENTICATION PAGE (Always Pure White Text)
+   ═══════════════════════════════════════════════ */
+
+.auth-page,
+html:not(.dark) .auth-page,
+.auth-page h1,
+html:not(.dark) .auth-page h1,
+.auth-page p,
+html:not(.dark) .auth-page p,
+.auth-page label,
+html:not(.dark) .auth-page label,
+.auth-page span,
+html:not(.dark) .auth-page span,
+.auth-page .auth-subtitle,
+html:not(.dark) .auth-page .auth-subtitle,
+.auth-page .auth-footnote,
+html:not(.dark) .auth-page .auth-footnote,
+.auth-page .auth-tab-inactive,
+html:not(.dark) .auth-page .auth-tab-inactive {
+  color: #ffffff !important;
+}
+
+.auth-page input,
+html:not(.dark) .auth-page input,
+.auth-page select,
+html:not(.dark) .auth-page select,
+.auth-page textarea,
+html:not(.dark) .auth-page textarea {
+  color: #ffffff !important;
+  background-color: rgba(2, 6, 23, 0.8) !important;
+}
+
+.auth-page input::placeholder,
+html:not(.dark) .auth-page input::placeholder,
+.auth-page textarea::placeholder,
+html:not(.dark) .auth-page textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.auth-page .text-slate-500,
+html:not(.dark) .auth-page .text-slate-500,
+.auth-page .text-slate-400,
+html:not(.dark) .auth-page .text-slate-400,
+.auth-page .text-slate-300,
+html:not(.dark) .auth-page .text-slate-300 {
+  color: #ffffff !important;
+}
+
+/* ═══════════════════════════════════════════════
    DARK MODE
    ═══════════════════════════════════════════════ */
 

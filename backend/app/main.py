@@ -43,6 +43,10 @@ async def lifespan(app: FastAPI):
                     conn.execute(text("ALTER TABLE content_quality_reports MODIFY COLUMN status VARCHAR(30) DEFAULT 'APPROVED';"))
                 except Exception:
                     pass
+                try:
+                    conn.execute(text("ALTER TABLE campaigns MODIFY COLUMN status VARCHAR(50) DEFAULT 'DRAFT';"))
+                except Exception:
+                    pass
                 conn.commit()
     except Exception as exc:
         logger.warning(f"Could not auto-migrate schema columns: {exc}")

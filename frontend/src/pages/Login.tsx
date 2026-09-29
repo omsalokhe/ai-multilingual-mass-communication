@@ -94,7 +94,7 @@ export default function Login() {
   };
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center bg-slate-950 px-4 py-12 overflow-hidden selection:bg-indigo-500 selection:text-white">
+    <div className="auth-page relative min-h-screen w-full flex items-center justify-center bg-slate-950 px-4 py-12 overflow-hidden selection:bg-indigo-500 selection:text-white">
       {/* Background ambient lighting effects */}
       <div className="pointer-events-none absolute -top-40 -left-40 h-96 w-96 rounded-full bg-indigo-600/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-violet-600/20 blur-3xl" />
@@ -103,14 +103,14 @@ export default function Login() {
       <div className="relative w-full max-w-md">
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-indigo-400 text-xs font-semibold tracking-wide uppercase shadow-inner mb-4">
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-white text-xs font-semibold tracking-wide uppercase shadow-inner mb-4">
             <Globe2 className="w-3.5 h-3.5 animate-spin-slow text-indigo-400" />
-            ConnectAI Multilingual Engine
+            <span className="text-white">ConnectAI Multilingual Engine</span>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             {mode === "login" ? "Welcome back" : "Create an account"}
           </h1>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-white auth-subtitle">
             {mode === "login"
               ? "Sign in to manage AI campaigns, translations, and multi-channel delivery."
               : "Register to orchestrate multilingual public communications."}
@@ -130,7 +130,7 @@ export default function Login() {
               className={`py-2 text-xs font-semibold rounded-lg transition-all ${
                 mode === "login"
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-white/80 hover:text-white auth-tab-inactive"
               }`}
             >
               Sign In
@@ -144,7 +144,7 @@ export default function Login() {
               className={`py-2 text-xs font-semibold rounded-lg transition-all ${
                 mode === "register"
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-white/80 hover:text-white auth-tab-inactive"
               }`}
             >
               Register
@@ -154,14 +154,14 @@ export default function Login() {
           {/* Quick Demo Helper */}
           {mode === "login" && (
             <div className="mb-6 p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/20 flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 text-indigo-300">
+              <div className="flex items-center gap-2 text-white">
                 <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
-                <span>Demo: <strong className="text-white">admin@connectai.org</strong></span>
+                <span className="text-white">Demo: <strong className="text-white font-semibold">admin@connectai.org</strong></span>
               </div>
               <button
                 type="button"
                 onClick={handleFillDemoAdmin}
-                className="px-2.5 py-1 font-medium bg-indigo-600/40 hover:bg-indigo-600/60 text-indigo-200 rounded-md transition-colors"
+                className="px-2.5 py-1 font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-md transition-colors shadow-sm"
               >
                 Auto-fill
               </button>
@@ -170,9 +170,9 @@ export default function Login() {
 
           {/* Error Banner */}
           {errorMessage && (
-            <div className="mb-6 p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/30 flex items-start gap-3 text-rose-300 text-xs">
+            <div className="mb-6 p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/30 flex items-start gap-3 text-rose-200 text-xs">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
+              <span className="text-rose-200">{errorMessage}</span>
             </div>
           )}
 
@@ -180,10 +180,10 @@ export default function Login() {
             {mode === "register" && (
               <>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Full Name</label>
+                  <label className="block text-xs font-medium text-white mb-1.5">Full Name</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <User className="w-4 h-4" />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white/70">
+                      <User className="w-4 h-4 text-white/70" />
                     </div>
                     <input
                       type="text"
@@ -191,47 +191,47 @@ export default function Login() {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Jane Doe"
-                      className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                      className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Phone Number (Optional)</label>
+                  <label className="block text-xs font-medium text-white mb-1.5">Phone Number (Optional)</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Phone className="w-4 h-4" />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white/70">
+                      <Phone className="w-4 h-4 text-white/70" />
                     </div>
                     <input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+91 98765 43210"
-                      className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                      className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Role</label>
+                  <label className="block text-xs font-medium text-white mb-1.5">Role</label>
                   <select
                     value={roleName}
                     onChange={(e) => setRoleName(e.target.value)}
                     className="w-full px-3.5 py-2.5 text-sm bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                   >
-                    <option value="ADMIN">Administrator (Full Access)</option>
-                    <option value="CAMPAIGN_MANAGER">Campaign Manager</option>
-                    <option value="COMMUNICATION_TEAM">Communication Team</option>
+                    <option value="ADMIN" className="bg-slate-900 text-white">Administrator (Full Access)</option>
+                    <option value="CAMPAIGN_MANAGER" className="bg-slate-900 text-white">Campaign Manager</option>
+                    <option value="COMMUNICATION_TEAM" className="bg-slate-900 text-white">Communication Team</option>
                   </select>
                 </div>
               </>
             )}
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Email Address</label>
+              <label className="block text-xs font-medium text-white mb-1.5">Email Address</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                  <Mail className="w-4 h-4" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white/70">
+                  <Mail className="w-4 h-4 text-white/70" />
                 </div>
                 <input
                   type="email"
@@ -239,16 +239,16 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@connectai.org"
-                  className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                  className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Password</label>
+              <label className="block text-xs font-medium text-white mb-1.5">Password</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                  <Lock className="w-4 h-4" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white/70">
+                  <Lock className="w-4 h-4 text-white/70" />
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -257,14 +257,14 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                  className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/70 hover:text-white transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-4 h-4 text-white/70" /> : <Eye className="w-4 h-4 text-white/70" />}
                 </button>
               </div>
             </div>
@@ -276,22 +276,22 @@ export default function Login() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Processing...</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span className="text-white">Processing...</span>
                 </>
               ) : (
                 <>
-                  <span>{mode === "login" ? "Sign In to Dashboard" : "Create Account"}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span className="text-white">{mode === "login" ? "Sign In to Dashboard" : "Create Account"}</span>
+                  <ArrowRight className="w-4 h-4 text-white" />
                 </>
               )}
             </button>
           </form>
 
           {/* Security footnote */}
-          <div className="mt-6 pt-5 border-t border-slate-800/80 flex items-center justify-center gap-2 text-slate-500 text-xs">
+          <div className="mt-6 pt-5 border-t border-slate-800/80 flex items-center justify-center gap-2 text-white auth-footnote text-xs">
             <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Secured with JWT & Role-Based Access Control</span>
+            <span className="text-white">Secured with JWT & Role-Based Access Control</span>
           </div>
         </div>
       </div>
