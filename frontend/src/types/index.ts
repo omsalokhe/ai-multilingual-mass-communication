@@ -51,6 +51,8 @@ export interface CreateCampaignRequest {
   priority?: string;
   segment_ids?: number[];
   channel?: string;
+  content_body?: string;
+  content_subject?: string;
 }
 
 export interface CreateCampaignResponse {

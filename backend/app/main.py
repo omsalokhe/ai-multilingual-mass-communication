@@ -74,6 +74,7 @@ app.include_router(channels_router)
 app.include_router(analytics_router)
 app.include_router(auth_router)
 app.include_router(crisis_router)
+app.include_router(crisis_router, prefix="/api")
 
 
 @app.get("/", tags=["Health & Status"])

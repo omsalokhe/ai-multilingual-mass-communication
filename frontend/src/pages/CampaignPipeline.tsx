@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
   Users,
+  FileText,
 } from "lucide-react";
 import { getCampaign } from "../lib/api";
 import type { CampaignDetail } from "../types";
@@ -57,7 +58,11 @@ export default function CampaignPipeline() {
       setCampaign(data);
       // If content already exists, enable later steps
       if (data.contents && data.contents.length > 0) {
-        setCompleted(new Set(["generate"]));
+        const completedSteps = new Set<StepKey>(["generate"]);
+        if (data.contents.some((c) => c.language !== "English" && c.language_id !== 1)) {
+          completedSteps.add("translate");
+        }
+        setCompleted(completedSteps);
       }
     } catch (err) {
       toast("error", "Failed to load campaign");
@@ -214,6 +219,29 @@ export default function CampaignPipeline() {
                   ))}
                 </div>
               )}
+
+              {/* Primary Content Preview if present */}
+              {hasContent && campaign.contents[0] && (
+                <div className="mt-3.5 p-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                      <FileText size={14} className="text-blue-600" />
+                      Active Campaign Message (English Source)
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                      Channel: {campaign.contents[0].channel}
+                    </span>
+                  </div>
+                  {campaign.contents[0].subject && (
+                    <p className="text-xs font-bold text-slate-800 dark:text-white mb-1">
+                      {campaign.contents[0].subject}
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-700 dark:text-slate-200 line-clamp-3 leading-relaxed font-medium">
+                    {campaign.contents[0].body}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -294,12 +322,15 @@ export default function CampaignPipeline() {
             {activeStep === "generate" && (
               <StepGenerate
                 campaignId={campaign.id}
+                existingContents={campaign.contents}
+                campaignObjective={campaign.objective}
                 onComplete={() => markComplete("generate")}
               />
             )}
             {activeStep === "translate" && (
               <StepTranslate
                 campaignId={campaign.id}
+                existingContents={campaign.contents}
                 onComplete={() => markComplete("translate")}
               />
             )}

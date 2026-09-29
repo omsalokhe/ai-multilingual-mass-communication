@@ -87,6 +87,8 @@ export default function CreateCampaign() {
         objective: objective || description || campaignName,
         priority,
         segment_ids: selectedSegments,
+        content_body: contentBody ? contentBody.trim() : undefined,
+        content_subject: contentSubject ? contentSubject.trim() : undefined,
       });
       toast("success", res.message);
       // Navigate to the new campaign's pipeline

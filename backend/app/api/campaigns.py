@@ -47,6 +47,8 @@ class CreateCampaignRequest(BaseModel):
     priority: str = Field(default="NORMAL", description="LOW, NORMAL, HIGH, CRITICAL")
     segment_ids: List[int] = Field(default=[], description="List of audience segment IDs to link")
     channel: Optional[str] = Field(default=None, description="Primary channel: EMAIL, SMS, WHATSAPP, PUSH, WEB, SOCIAL")
+    content_body: Optional[str] = Field(default=None, description="Initial campaign message body")
+    content_subject: Optional[str] = Field(default=None, description="Initial campaign subject line")
 
 
 class CreateCampaignResponse(BaseModel):
@@ -94,6 +96,21 @@ def create_campaign(request: CreateCampaignRequest, db: Session = Depends(get_db
         if segment:
             mapping = CampaignAudience(campaign_id=campaign.id, segment_id=seg_id)
             db.add(mapping)
+
+    # If content_body is provided, persist initial source content into campaign_contents
+    if request.content_body and request.content_body.strip():
+        en_lang = db.query(Language).filter(Language.code == "en").first()
+        initial_content = CampaignContent(
+            campaign_id=campaign.id,
+            language_id=en_lang.id if en_lang else 1,
+            channel=(request.channel or "SMS").upper(),
+            subject=request.content_subject or campaign.name,
+            body=request.content_body.strip(),
+            ai_generated=False,
+            version=1,
+            status="DRAFT"
+        )
+        db.add(initial_content)
 
     db.commit()
     db.refresh(campaign)
