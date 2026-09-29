@@ -354,18 +354,21 @@ html.dark .border-slate-50 {
   border-color: #1e293b !important;
 }
 
-/* Text overrides */
+/* Text overrides – soft, readable tones */
 html.dark .text-slate-800 {
-  color: #e2e8f0 !important;
+  color: #f1f5f9 !important;
 }
 html.dark .text-slate-700 {
-  color: #cbd5e1 !important;
+  color: #e2e8f0 !important;
 }
 html.dark .text-slate-600 {
-  color: #94a3b8 !important;
+  color: #cbd5e1 !important;
 }
 html.dark .text-slate-500 {
-  color: #64748b !important;
+  color: #94a3b8 !important;
+}
+html.dark .text-slate-400 {
+  color: #8892a6 !important;
 }
 
 /* Inputs & selects */
@@ -378,7 +381,7 @@ html.dark textarea {
 }
 html.dark input::placeholder,
 html.dark textarea::placeholder {
-  color: #64748b;
+  color: #7a859b;
 }
 html.dark input:focus,
 html.dark select:focus,
@@ -389,7 +392,7 @@ html.dark textarea:focus {
 
 /* Tables */
 html.dark th {
-  color: #94a3b8 !important;
+  color: #b0bac9 !important;
 }
 html.dark tr {
   border-color: #1e293b;
