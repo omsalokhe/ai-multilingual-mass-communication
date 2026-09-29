@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Activity, Loader2 } from "lucide-react";
 import { analyzeSentiment } from "../../lib/api";
 import type { SentimentResponse } from "../../types";
@@ -6,6 +6,7 @@ import StatusBadge from "../../components/StatusBadge";
 import ScoreRing from "../../components/ScoreRing";
 import LanguageComparison from "../../components/LanguageComparison";
 import { useToast } from "../../components/Toast";
+import { useAppSettings } from "../../context/AppSettingsContext";
 
 interface Props {
   campaignId: number;
@@ -16,10 +17,27 @@ const PROVIDERS = ["default", "gemini", "groq"];
 
 export default function StepSentiment({ campaignId, onComplete }: Props) {
   const { toast } = useToast();
+  const { generalSettings } = useAppSettings();
+  const isDark = generalSettings.darkMode;
+
   const [includeSuggestions, setIncludeSuggestions] = useState(true);
   const [provider, setProvider] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SentimentResponse | null>(null);
+
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(`campaign_${campaignId}_sentiment`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.reports && parsed.reports.length > 0) {
+          setResult(parsed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [campaignId]);
 
   const handleAnalyze = async () => {
     setLoading(true);
@@ -45,7 +63,7 @@ export default function StepSentiment({ campaignId, onComplete }: Props) {
       {/* Form */}
       <div className="flex flex-wrap gap-6 items-end">
         <div className="flex items-center gap-3">
-          <label className="text-xs font-medium text-slate-500">
+          <label className={`text-xs font-bold ${isDark ? "text-slate-300" : "text-black"}`}>
             Include Tone Suggestions
           </label>
           <button
@@ -63,13 +81,15 @@ export default function StepSentiment({ campaignId, onComplete }: Props) {
         </div>
 
         <div className="max-w-xs">
-          <label className="block text-xs font-medium text-slate-500 mb-1.5">
+          <label className={`block text-xs font-bold mb-1.5 ${isDark ? "text-slate-300" : "text-black"}`}>
             Provider (optional)
           </label>
           <select
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+            className={`w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+              isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-300 text-black"
+            }`}
           >
             <option value="">Default</option>
             {PROVIDERS.map((p) => (
@@ -84,7 +104,7 @@ export default function StepSentiment({ campaignId, onComplete }: Props) {
       <button
         onClick={handleAnalyze}
         disabled={loading}
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm"
       >
         {loading ? (
           <Loader2 size={16} className="animate-spin" />
@@ -99,11 +119,13 @@ export default function StepSentiment({ campaignId, onComplete }: Props) {
         <div className="space-y-4">
           {/* Summary strip */}
           {result.summary && (
-            <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 text-sm">
+            <div className={`flex flex-wrap items-center gap-3 px-4 py-3 rounded-lg border text-sm ${
+              isDark ? "bg-slate-900 border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-black"
+            }`}>
               {Object.entries(result.summary).map(([k, v]) => (
-                <span key={k} className="text-slate-500">
+                <span key={k} className={isDark ? "text-slate-400" : "text-slate-600"}>
                   {k.replace(/_/g, " ")}:{" "}
-                  <span className="font-medium text-slate-700">
+                  <span className={`font-bold ${isDark ? "text-white" : "text-black"}`}>
                     {String(v)}
                   </span>
                 </span>
@@ -121,7 +143,9 @@ export default function StepSentiment({ campaignId, onComplete }: Props) {
                   {/* Sentiment + Tone */}
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={r.sentiment} />
-                    <span className="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded">
+                    <span className={`text-xs px-2.5 py-0.5 rounded font-bold ${
+                      isDark ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-800"
+                    }`}>
                       Tone: {r.tone}
                     </span>
                   </div>
@@ -134,7 +158,7 @@ export default function StepSentiment({ campaignId, onComplete }: Props) {
                         size={64}
                         strokeWidth={5}
                       />
-                      <span className="text-[10px] text-slate-400 mt-1">
+                      <span className={`text-[10px] mt-1 font-bold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                         Clarity
                       </span>
                     </div>
@@ -144,7 +168,7 @@ export default function StepSentiment({ campaignId, onComplete }: Props) {
                         size={64}
                         strokeWidth={5}
                       />
-                      <span className="text-[10px] text-slate-400 mt-1">
+                      <span className={`text-[10px] mt-1 font-bold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                         Overall
                       </span>
                     </div>
@@ -152,10 +176,10 @@ export default function StepSentiment({ campaignId, onComplete }: Props) {
 
                   {/* Body preview */}
                   <div>
-                    <p className="text-[11px] font-medium text-slate-400 mb-0.5">
+                    <p className={`text-[11px] font-bold mb-0.5 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                       Preview
                     </p>
-                    <p className="text-xs text-slate-600 line-clamp-3">
+                    <p className={`text-xs line-clamp-3 leading-relaxed font-medium ${isDark ? "text-slate-200" : "text-black"}`}>
                       {r.body_preview}
                     </p>
                   </div>
@@ -163,16 +187,16 @@ export default function StepSentiment({ campaignId, onComplete }: Props) {
                   {/* Tone suggestions */}
                   {r.tone_suggestions && r.tone_suggestions.length > 0 && (
                     <div>
-                      <p className="text-[11px] font-medium text-slate-400 mb-1.5">
+                      <p className={`text-[11px] font-bold mb-1.5 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                         Suggestions
                       </p>
                       <ul className="space-y-1">
                         {r.tone_suggestions.map((s, idx) => (
                           <li
                             key={idx}
-                            className="text-xs text-slate-600 flex gap-1.5"
+                            className={`text-xs flex gap-1.5 font-medium ${isDark ? "text-slate-300" : "text-black"}`}
                           >
-                            <span className="text-indigo-400 shrink-0">•</span>
+                            <span className="text-indigo-500 font-bold shrink-0">•</span>
                             {s}
                           </li>
                         ))}

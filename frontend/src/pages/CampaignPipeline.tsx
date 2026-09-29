@@ -57,13 +57,33 @@ export default function CampaignPipeline() {
       const data = await getCampaign(Number(id));
       setCampaign(data);
       // If content already exists, enable later steps
+      const completedSteps = new Set<StepKey>();
       if (data.contents && data.contents.length > 0) {
-        const completedSteps = new Set<StepKey>(["generate"]);
+        completedSteps.add("generate");
         if (data.contents.some((c) => c.language !== "English" && c.language_id !== 1)) {
           completedSteps.add("translate");
         }
-        setCompleted(completedSteps);
       }
+
+      // Check cached pipeline completions
+      try {
+        if (localStorage.getItem(`campaign_${id}_translations`)) {
+          completedSteps.add("generate");
+          completedSteps.add("translate");
+        }
+        if (localStorage.getItem(`campaign_${id}_personalized`)) {
+          completedSteps.add("personalize");
+        }
+        if (localStorage.getItem(`campaign_${id}_sentiment`)) {
+          completedSteps.add("sentiment");
+        }
+        if (localStorage.getItem(`campaign_${id}_quality`)) {
+          completedSteps.add("quality");
+        }
+      } catch {
+        // ignore
+      }
+      setCompleted(completedSteps);
     } catch (err) {
       toast("error", "Failed to load campaign");
       console.error(err);

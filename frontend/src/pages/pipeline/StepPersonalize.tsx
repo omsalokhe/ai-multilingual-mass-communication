@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UserCheck, Loader2, Plus, Trash2 } from "lucide-react";
 import { personalizeContent } from "../../lib/api";
 import type { PersonalizeResponse } from "../../types";
 import LanguageComparison from "../../components/LanguageComparison";
 import { useToast } from "../../components/Toast";
+import { useAppSettings } from "../../context/AppSettingsContext";
 
 interface Props {
   campaignId: number;
@@ -17,12 +18,29 @@ export default function StepPersonalize({
   onComplete,
 }: Props) {
   const { toast } = useToast();
+  const { generalSettings } = useAppSettings();
+  const isDark = generalSettings.darkMode;
+
   const [segmentId, setSegmentId] = useState<string>("");
   const [customVars, setCustomVars] = useState<{ key: string; value: string }[]>(
     []
   );
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PersonalizeResponse | null>(null);
+
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(`campaign_${campaignId}_personalized`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.contents_personalized && parsed.contents_personalized.length > 0) {
+          setResult(parsed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [campaignId]);
 
   const addVar = () => setCustomVars((v) => [...v, { key: "", value: "" }]);
   const removeVar = (i: number) =>

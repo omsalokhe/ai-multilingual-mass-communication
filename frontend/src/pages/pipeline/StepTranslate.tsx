@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Languages, Loader2, CheckCircle2 } from "lucide-react";
 import { translateContent } from "../../lib/api";
 import type { TranslateResponse, CampaignContent } from "../../types";
@@ -34,6 +34,20 @@ export default function StepTranslate({ campaignId, existingContents, onComplete
   const [provider, setProvider] = useState("auto");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TranslateResponse | null>(null);
+
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(`campaign_${campaignId}_translations`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.translations && parsed.translations.length > 0) {
+          setResult(parsed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [campaignId]);
 
   // Existing translations in database
   const existingTranslations =
