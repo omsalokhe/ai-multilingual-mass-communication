@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM_EMAIL: str = ""
     SMTP_FROM_NAME: str = "ConnectAI Mass Communications"
+    RESEND_API_KEY: str = ""
+    BREVO_API_KEY: str = ""
 
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""

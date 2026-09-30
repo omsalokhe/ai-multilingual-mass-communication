@@ -6,6 +6,10 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.services.channel_dispatcher import ChannelDispatcherService
 
+import logging
+
+logger = logging.getLogger("uvicorn.error")
+
 router = APIRouter(prefix="/channels", tags=["Communication Channels & Dispatch"])
 
 
@@ -61,7 +65,8 @@ def send_test_message(req: SendTestRequest, db: Session = Depends(get_db)):
             language=req.language or "English"
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in send_test_message: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to dispatch test communication: {str(e)}")
 
 
 @router.post(
@@ -82,4 +87,5 @@ def dispatch_campaign(req: DispatchCampaignRequest, db: Session = Depends(get_db
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        logger.error(f"Error in dispatch_campaign: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
