@@ -7,6 +7,7 @@ import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import List, Optional
+from urllib.parse import quote as url_quote
 import httpx
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
@@ -48,29 +49,31 @@ REGION_LANGUAGE_MAP = {
 }
 
 # Domain RSS query definitions (100% free Google News RSS with India localization)
+# NOTE: Google News RSS works best with simple keyword queries, not complex boolean operators.
+# Single-quoted phrases and parenthesized OR groups often fail silently, returning 0 results.
 DOMAIN_CONFIG = {
     "all": {
-        "query": "india+(weather+OR+flood+OR+'government scheme'+OR+yojana+OR+education+OR+exam+OR+agriculture)",
+        "query": "india news government scheme education agriculture weather",
         "default_cat": "National",
     },
     "disaster": {
-        "query": "india+(weather+OR+flood+OR+cyclone+OR+heavy+rain+OR+alert+OR+landslide)",
+        "query": "india weather flood cyclone heavy rain alert landslide disaster",
         "default_cat": "Disaster",
     },
     "schemes": {
-        "query": "india+('government scheme' OR yojana OR 'welfare scheme' OR 'cabinet approves' OR subsidy OR 'PM kisan' OR 'ayushman' OR 'direct benefit transfer')",
+        "query": "india government scheme yojana welfare subsidy cabinet approves",
         "default_cat": "Govt Scheme",
     },
     "education": {
-        "query": "india+(education OR CBSE OR UGC OR scholarship OR 'admit card' OR 'entrance exam' OR 'NEET' OR 'JEE' OR university OR 'results declared')",
+        "query": "india education exam CBSE UGC scholarship NEET JEE results university",
         "default_cat": "Education",
     },
     "agriculture": {
-        "query": "india+(agriculture OR farmers OR 'PM kisan' OR MSP OR 'crop insurance' OR 'kharif' OR 'mandi' OR 'krishi')",
+        "query": "india agriculture farmers kisan MSP crop mandi krishi",
         "default_cat": "Agriculture",
     },
     "health": {
-        "query": "india+('public health' OR 'ayushman bharat' OR 'disease outbreak' OR 'vaccination' OR 'health ministry' OR 'medical alert')",
+        "query": "india health ayushman bharat hospital vaccination medical advisory",
         "default_cat": "Health",
     },
 }
@@ -411,11 +414,12 @@ async def get_crisis_news(
     config = DOMAIN_CONFIG.get(selected_domain, DOMAIN_CONFIG["all"])
     query_str = config["query"]
 
-    rss_url = f"https://news.google.com/rss/search?q={query_str}&hl=en-IN&gl=IN&ceid=IN:en"
+    encoded_query = url_quote(query_str)
+    rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en-IN&gl=IN&ceid=IN:en"
     items: List[NewsItem] = []
 
     try:
-        async with httpx.AsyncClient(timeout=4.5, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
             resp = await client.get(rss_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
             if resp.status_code == 200:
                 root = ET.fromstring(resp.text)
