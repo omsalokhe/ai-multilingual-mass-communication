@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import List, Optional
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 logger = logging.getLogger("uvicorn")
@@ -47,6 +47,34 @@ REGION_LANGUAGE_MAP = {
     "Madhya Pradesh": "Hindi",
 }
 
+# Domain RSS query definitions (100% free Google News RSS with India localization)
+DOMAIN_CONFIG = {
+    "all": {
+        "query": "india+(weather+OR+flood+OR+'government scheme'+OR+yojana+OR+education+OR+exam+OR+agriculture)",
+        "default_cat": "National",
+    },
+    "disaster": {
+        "query": "india+(weather+OR+flood+OR+cyclone+OR+heavy+rain+OR+alert+OR+landslide)",
+        "default_cat": "Disaster",
+    },
+    "schemes": {
+        "query": "india+('government scheme' OR yojana OR 'welfare scheme' OR 'cabinet approves' OR subsidy OR 'PM kisan' OR 'ayushman' OR 'direct benefit transfer')",
+        "default_cat": "Govt Scheme",
+    },
+    "education": {
+        "query": "india+(education OR CBSE OR UGC OR scholarship OR 'admit card' OR 'entrance exam' OR 'NEET' OR 'JEE' OR university OR 'results declared')",
+        "default_cat": "Education",
+    },
+    "agriculture": {
+        "query": "india+(agriculture OR farmers OR 'PM kisan' OR MSP OR 'crop insurance' OR 'kharif' OR 'mandi' OR 'krishi')",
+        "default_cat": "Agriculture",
+    },
+    "health": {
+        "query": "india+('public health' OR 'ayushman bharat' OR 'disease outbreak' OR 'vaccination' OR 'health ministry' OR 'medical alert')",
+        "default_cat": "Health",
+    },
+}
+
 class NewsItem(BaseModel):
     id: str
     title: str
@@ -54,8 +82,8 @@ class NewsItem(BaseModel):
     source: str
     link: str
     pub_date: str
-    category: str  # Flood, Cyclone, Heavy Rain, Heatwave, Advisory
-    severity: str  # CRITICAL, WARNING, ADVISORY
+    category: str  # Flood, Cyclone, Govt Scheme, Education, Agriculture, Health, Advisory
+    severity: str  # CRITICAL, WARNING, ADVISORY, ANNOUNCEMENT
     region: str
     suggested_language: str
 
@@ -74,6 +102,7 @@ class WeatherAlert(BaseModel):
     description: str
 
 FALLBACK_NEWS: List[dict] = [
+    # Disaster items
     {
         "id": "fb-1",
         "title": "IMD issues Red Alert for Coastal Maharashtra and Mumbai: Extremely Heavy Rainfall Predicted",
@@ -110,39 +139,79 @@ FALLBACK_NEWS: List[dict] = [
         "region": "Odisha",
         "suggested_language": "Odia",
     },
+    # Government Schemes items
     {
-        "id": "fb-4",
-        "title": "Uttarakhand & Himachal Weather Warning: Cloudburst alert for Chamoli & Mandi hills",
-        "summary": "District magistrates urge residents near mountain streams to move to higher ground. Border Roads Organisation (BRO) clearing debris on high-altitude transit highways.",
-        "source": "PIB India Disaster Desk",
-        "link": "https://pib.gov.in",
-        "pub_date": "3 hours ago",
-        "category": "Heavy Rain",
-        "severity": "WARNING",
-        "region": "Uttarakhand",
+        "id": "fb-sch-1",
+        "title": "PM-Kisan 18th Installment Release: Direct Benefit Transfer for 9.5 Crore Farmers Scheduled",
+        "summary": "Ministry of Agriculture confirms direct transfer of ₹2,000 per eligible farmer family. Aadhaar-linked bank accounts and e-KYC mandatory before deadline.",
+        "source": "PIB Press Release",
+        "link": "https://pmkisan.gov.in",
+        "pub_date": "2 hours ago",
+        "category": "Govt Scheme",
+        "severity": "ANNOUNCEMENT",
+        "region": "Uttar Pradesh",
         "suggested_language": "Hindi",
     },
     {
-        "id": "fb-5",
-        "title": "Monsoon Active in Southern Peninsula: Heavy Downpour Forecast for Wayanad & Idukki",
-        "summary": "District collectors place disaster response teams on high alert following continuous overnight downpours. Landslide warning issued for vulnerable slope settlements.",
-        "source": "Kerala SDMA",
-        "link": "https://sdma.kerala.gov.in",
-        "pub_date": "4 hours ago",
-        "category": "Flood",
+        "id": "fb-sch-2",
+        "title": "Pradhan Mantri Awas Yojana (PMAY-Urban 2.0): Financial Subsidies Expanded for Middle Income Housing",
+        "summary": "Cabinet approves ₹10 lakh interest subsidy scheme for 1 crore urban poor and middle-class households. Online application window launched across municipal portals.",
+        "source": "Ministry of Housing & Urban Affairs",
+        "link": "https://pmay-urban.gov.in",
+        "pub_date": "3 hours ago",
+        "category": "Govt Scheme",
+        "severity": "ANNOUNCEMENT",
+        "region": "Maharashtra",
+        "suggested_language": "Marathi",
+    },
+    # Education items
+    {
+        "id": "fb-edu-1",
+        "title": "National Scholarship Portal (NSP 2026-27): Central Merit & Pre-Matric Applications Open",
+        "summary": "Ministry of Education invites eligible school and college students to submit scholarship forms online. Biometric Aadhaar authentication enabled for all state candidates.",
+        "source": "Ministry of Education",
+        "link": "https://scholarships.gov.in",
+        "pub_date": "1 hour ago",
+        "category": "Education",
         "severity": "WARNING",
-        "region": "Kerala",
-        "suggested_language": "Malayalam",
+        "region": "Karnataka",
+        "suggested_language": "Kannada",
     },
     {
-        "id": "fb-6",
-        "title": "Coastal Tamil Nadu & Chennai: Northeast Monsoon Influx triggers localized cloudbursts",
-        "summary": "Greater Chennai Corporation opens 24x7 control rooms and deploys dewatering pump stations across vulnerable low-lying neighborhoods.",
-        "source": "The Hindu Weather",
-        "link": "https://www.thehindu.com",
-        "pub_date": "5 hours ago",
-        "category": "Heavy Rain",
+        "id": "fb-edu-2",
+        "title": "UGC Issues National Advisory on Common University Entrance Test (CUET) & Revised Syllabus",
+        "summary": "University Grants Commission issues notification for state university admissions. Examination centres expanded across tier-2 and tier-3 districts nationwide.",
+        "source": "UGC India Press Desk",
+        "link": "https://ugc.gov.in",
+        "pub_date": "4 hours ago",
+        "category": "Education",
         "severity": "ADVISORY",
+        "region": "Delhi",
+        "suggested_language": "Hindi",
+    },
+    # Agriculture items
+    {
+        "id": "fb-agri-1",
+        "title": "Cabinet Approves Record MSP Hike for 14 Kharif Crops: Paddy Support Price Raised to Protect Margins",
+        "summary": "Central government announces increased Minimum Support Price (MSP) guaranteeing at least 50% margin over production cost for grain, pulse, and oilseed growers.",
+        "source": "PIB Agriculture Desk",
+        "link": "https://agricoop.nic.in",
+        "pub_date": "5 hours ago",
+        "category": "Agriculture",
+        "severity": "ANNOUNCEMENT",
+        "region": "Punjab",
+        "suggested_language": "Punjabi",
+    },
+    # Health items
+    {
+        "id": "fb-hlth-1",
+        "title": "Ayushman Bharat PM-JAY: Free Health Cover of ₹5 Lakh Extended to All Senior Citizens Aged 70+",
+        "summary": "Health ministry rolls out dedicated golden card distribution across community health centres. No income criteria applies for senior citizens enrolled under the new provision.",
+        "source": "National Health Authority",
+        "link": "https://nha.gov.in",
+        "pub_date": "3 hours ago",
+        "category": "Health",
+        "severity": "ANNOUNCEMENT",
         "region": "Tamil Nadu",
         "suggested_language": "Tamil",
     },
@@ -287,42 +356,66 @@ def detect_region_and_language(text: str) -> tuple[str, str]:
     return "India (National)", "Hindi"
 
 
-def detect_category_and_severity(title: str, summary: str) -> tuple[str, str]:
-    """Classifies disaster category and severity based on keyword indicators."""
+def detect_category_and_severity(title: str, summary: str, default_domain: str = "all") -> tuple[str, str]:
+    """Classifies domain category and urgency/severity based on keyword indicators."""
     combined = (title + " " + summary).lower()
 
-    if any(k in combined for k in ["red alert", "flash flood", "dead", "evacuat", "emergency", "catastroph"]):
+    # Severity determination
+    if any(k in combined for k in ["red alert", "flash flood", "dead", "evacuat", "emergency", "catastroph", "severe alert"]):
         severity = "CRITICAL"
-    elif any(k in combined for k in ["orange alert", "heavy rain", "warning", "spate", "disrupt", "danger mark"]):
+    elif any(k in combined for k in ["orange alert", "heavy rain", "warning", "spate", "disrupt", "danger mark", "deadline", "last date", "urgent"]):
         severity = "WARNING"
+    elif any(k in combined for k in ["scheme", "launche", "approv", "installment", "subsid", "pib", "pm-", "welfare"]):
+        severity = "ANNOUNCEMENT"
     else:
         severity = "ADVISORY"
 
+    # Category determination
     if any(k in combined for k in ["flood", "inundat", "waterlog"]):
         category = "Flood"
     elif any(k in combined for k in ["cyclone", "tornado", "depression", "gale", "storm"]):
         category = "Cyclone"
     elif any(k in combined for k in ["cloudburst", "rain", "downpour", "monsoon"]):
         category = "Heavy Rain"
-    elif any(k in combined for k in ["heatwave", "heat", "temperature", "drought"]):
+    elif any(k in combined for k in ["heatwave", "temperature", "drought"]):
         category = "Heatwave"
+    elif any(k in combined for k in ["scheme", "yojana", "subsid", "welfare", "pradhan mantri", "cabinet approves", "dbt"]):
+        category = "Govt Scheme"
+    elif any(k in combined for k in ["education", "cbse", "ugc", "scholarship", "exam", "admit card", "neet", "jee", "university", "admission"]):
+        category = "Education"
+    elif any(k in combined for k in ["farmer", "agriculture", "kisan", "msp", "crop", "fertilizer", "mandi"]):
+        category = "Agriculture"
+    elif any(k in combined for k in ["health", "ayushman", "disease", "outbreak", "vaccin", "hospital", "medical"]):
+        category = "Health"
     else:
-        category = "Weather Advisory"
+        # Fall back to default domain tag
+        cfg = DOMAIN_CONFIG.get(default_domain.lower(), DOMAIN_CONFIG["all"])
+        category = cfg["default_cat"]
 
     return category, severity
 
 
 @router.get("/news", response_model=List[NewsItem])
-async def get_crisis_news():
+async def get_crisis_news(
+    category: Optional[str] = "all",
+    domain: Optional[str] = None,
+):
     """
-    Fetches real-time disaster, flood, and weather news from free RSS feeds.
+    Fetches real-time bulletins from free Google News RSS feeds across various domains
+    (Disasters, Government Schemes, Education, Agriculture, Healthcare, National).
     Falls back gracefully to high-fidelity live items if network is constrained.
     """
-    rss_url = "https://news.google.com/rss/search?q=india+(weather+OR+flood+OR+cyclone+OR+heavy+rain+OR+alert)&hl=en-IN&gl=IN&ceid=IN:en"
+    cat_val = category if isinstance(category, str) else "all"
+    dom_val = domain if isinstance(domain, str) else None
+    selected_domain = (dom_val or cat_val or "all").lower().strip()
+    config = DOMAIN_CONFIG.get(selected_domain, DOMAIN_CONFIG["all"])
+    query_str = config["query"]
+
+    rss_url = f"https://news.google.com/rss/search?q={query_str}&hl=en-IN&gl=IN&ceid=IN:en"
     items: List[NewsItem] = []
 
     try:
-        async with httpx.AsyncClient(timeout=4.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=4.5, follow_redirects=True) as client:
             resp = await client.get(rss_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
             if resp.status_code == 200:
                 root = ET.fromstring(resp.text)
@@ -330,7 +423,7 @@ async def get_crisis_news():
                 if channel is not None:
                     raw_items = channel.findall("item")[:15]
                     for idx, raw in enumerate(raw_items):
-                        raw_title = raw.findtext("title") or "Weather Alert"
+                        raw_title = raw.findtext("title") or "National Bulletin"
                         link = raw.findtext("link") or "https://news.google.com"
                         pub_date = raw.findtext("pubDate") or "Recent"
                         raw_desc = raw.findtext("description") or ""
@@ -342,7 +435,7 @@ async def get_crisis_news():
                             clean_desc = raw_title
 
                         # Detect source from title (e.g., "Headline - Times of India")
-                        source = "News Media"
+                        source = "National Media"
                         if " - " in raw_title:
                             parts = raw_title.rsplit(" - ", 1)
                             title_text = parts[0]
@@ -351,11 +444,11 @@ async def get_crisis_news():
                             title_text = raw_title
 
                         region, language = detect_region_and_language(title_text + " " + clean_desc)
-                        cat, sev = detect_category_and_severity(title_text, clean_desc)
+                        cat, sev = detect_category_and_severity(title_text, clean_desc, selected_domain)
 
                         items.append(
                             NewsItem(
-                                id=f"rss-{idx}",
+                                id=f"rss-{selected_domain}-{idx}",
                                 title=title_text,
                                 summary=clean_desc[:240] + ("..." if len(clean_desc) > 240 else ""),
                                 source=source,
@@ -368,11 +461,24 @@ async def get_crisis_news():
                             )
                         )
     except Exception as exc:
-        logger.warning(f"Could not fetch external news RSS feed: {exc}. Using curated live disaster news.")
+        logger.warning(f"Could not fetch external news RSS feed for '{selected_domain}': {exc}. Using curated live items.")
 
-    # If external fetch was empty or failed, use fallback
+    # If external fetch was empty or failed, use fallback filtered by domain if applicable
     if not items:
-        items = [NewsItem(**item) for item in FALLBACK_NEWS]
+        if selected_domain in ["schemes"]:
+            items = [NewsItem(**item) for item in FALLBACK_NEWS if item["category"] == "Govt Scheme"]
+        elif selected_domain in ["education"]:
+            items = [NewsItem(**item) for item in FALLBACK_NEWS if item["category"] == "Education"]
+        elif selected_domain in ["agriculture"]:
+            items = [NewsItem(**item) for item in FALLBACK_NEWS if item["category"] == "Agriculture"]
+        elif selected_domain in ["health"]:
+            items = [NewsItem(**item) for item in FALLBACK_NEWS if item["category"] == "Health"]
+        elif selected_domain in ["disaster"]:
+            items = [NewsItem(**item) for item in FALLBACK_NEWS if item["category"] in ["Flood", "Cyclone", "Heavy Rain", "Disaster"]]
+        
+        # If still empty, return all fallback news
+        if not items:
+            items = [NewsItem(**item) for item in FALLBACK_NEWS]
 
     return items
 

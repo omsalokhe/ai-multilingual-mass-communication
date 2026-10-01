@@ -500,7 +500,7 @@ export interface CrisisNewsItem {
   link: string;
   pub_date: string;
   category: string;
-  severity: "CRITICAL" | "WARNING" | "ADVISORY";
+  severity: "CRITICAL" | "WARNING" | "ADVISORY" | "ANNOUNCEMENT" | string;
   region: string;
   suggested_language: string;
 }
