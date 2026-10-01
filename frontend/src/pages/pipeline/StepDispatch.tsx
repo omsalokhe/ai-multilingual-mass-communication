@@ -239,9 +239,10 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
       toast("success", `Campaign message broadcasted successfully via ${directChannel}!`);
     } catch (err: any) {
       const cleanTo = directRecipient.trim();
-      const mailto = `mailto:${cleanTo}?subject=${encodeURIComponent(
-        campaign?.name || "Official Public Communication Alert"
-      )}&body=${encodeURIComponent(activeMessage)}`;
+      const encodedSubj = encodeURIComponent(campaign?.name || "Official Public Communication Alert");
+      const encodedMsg = encodeURIComponent(activeMessage);
+      const mailto = `mailto:${cleanTo}?subject=${encodedSubj}&body=${encodedMsg}`;
+      const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cleanTo)}&su=${encodedSubj}&body=${encodedMsg}`;
       const cleanDigits = cleanTo.replace(/[^0-9]/g, "");
 
       const fallbackReceipt: SendTestResponse = {
@@ -253,8 +254,9 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
         provider: `${directChannel} Gateway Relay`,
         details: `Official communication dispatched via ${directChannel} Gateway Relay to ${cleanTo}.`,
         mailto_url: mailto,
-        whatsapp_url: `https://wa.me/${cleanDigits}?text=${encodeURIComponent(activeMessage)}`,
-        sms_url: `sms:${cleanTo.replace(/[^0-9+]/g, "")}?body=${encodeURIComponent(activeMessage)}`,
+        gmail_url: gmail,
+        whatsapp_url: `https://wa.me/${cleanDigits}?text=${encodedMsg}`,
+        sms_url: `sms:${cleanTo.replace(/[^0-9+]/g, "")}?body=${encodedMsg}`,
         timestamp: new Date().toISOString(),
       };
 
@@ -344,6 +346,7 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
 
   // Pre-generate direct link URLs
   const cleanPhone = directRecipient.replace(/[^0-9]/g, "");
+  const cleanEmail = directRecipient.trim();
   const whatsappUrl =
     directReceipt?.whatsapp_url ||
     `https://wa.me/${cleanPhone}?text=${encodeURIComponent(activeMessage)}`;
@@ -352,7 +355,14 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
     `sms:${directRecipient.replace(/[^0-9+]/g, "")}?body=${encodeURIComponent(activeMessage)}`;
   const mailtoUrl =
     directReceipt?.mailto_url ||
-    `mailto:${directRecipient}?subject=${encodeURIComponent(
+    `mailto:${cleanEmail}?subject=${encodeURIComponent(
+      campaign?.name || "Official Public Communication Alert"
+    )}&body=${encodeURIComponent(activeMessage)}`;
+  const gmailUrl =
+    directReceipt?.gmail_url ||
+    `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+      cleanEmail
+    )}&su=${encodeURIComponent(
       campaign?.name || "Official Public Communication Alert"
     )}&body=${encodeURIComponent(activeMessage)}`;
 
@@ -629,26 +639,39 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
           )}
 
           {directChannel === "EMAIL" && (
-            <div className="p-4 rounded-xl bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 space-y-2.5">
+            <div className="p-4 rounded-xl bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-indigo-800 dark:text-indigo-200 flex items-center gap-1.5">
-                  <Mail size={15} className="text-indigo-600" />
-                  Direct Email Client Dispatch
+                  <Mail size={15} className="text-indigo-600 dark:text-indigo-400" />
+                  Email Dispatch Options
                 </span>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-700">
-                  Mailto Link
+                  Instant 1-Click
                 </span>
               </div>
+
+              {/* Primary 1-Click: Gmail Web Dispatch */}
               <a
-                href={mailtoUrl}
-                className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                href={gmailUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-700 hover:to-rose-800 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ExternalLink size={15} />
-                Open in Default Email App
+                Open & Send in Gmail (Web Browser)
               </a>
+
+              {/* Secondary Option: Default Desktop Email Client (Mailto) */}
+              <a
+                href={mailtoUrl}
+                className="w-full py-2.5 px-4 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-all border border-slate-300 dark:border-slate-700 flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              >
+                <Mail size={14} className="text-slate-500" />
+                Open in Desktop Email App (Outlook / Apple Mail)
+              </a>
+
               <p className="text-[11px] text-indigo-700 dark:text-indigo-400 text-center">
-                Pre-populates subject and recipient {directRecipient} in Outlook, Apple Mail, or
-                Gmail.
+                Opens Gmail directly with recipient <span className="font-mono font-bold">{directRecipient}</span>, subject, and active translation pre-filled.
               </p>
             </div>
           )}
@@ -690,7 +713,7 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
         {/* Receipt Feedback (Identical to Content & Templates) */}
         {directReceipt && (
           <div
-            className={`p-4 rounded-xl border space-y-2.5 animate-fade-in text-xs ${
+            className={`p-4 rounded-xl border space-y-3 animate-fade-in text-xs ${
               directReceipt.status === "DELIVERED"
                 ? "bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800"
                 : "bg-amber-50/90 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800"
@@ -732,6 +755,54 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
             <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
               Gateway ID: {directReceipt.message_id}
             </p>
+
+            {/* Quick 1-click fallback actions if gateway encountered restrictions */}
+            {directChannel === "EMAIL" && (
+              <div className="pt-2 border-t border-amber-200/80 dark:border-slate-800 flex flex-col sm:flex-row gap-2">
+                <a
+                  href={directReceipt.gmail_url || gmailUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2 px-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <ExternalLink size={13} />
+                  Open & Send in Gmail (Web Browser)
+                </a>
+                <a
+                  href={directReceipt.mailto_url || mailtoUrl}
+                  className="py-2 px-3 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-all border border-slate-300 dark:border-slate-700 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Mail size={13} />
+                  Open in Desktop App
+                </a>
+              </div>
+            )}
+
+            {directChannel === "WHATSAPP" && (
+              <div className="pt-2 border-t border-emerald-200/80 dark:border-slate-800">
+                <a
+                  href={directReceipt.whatsapp_url || whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <ExternalLink size={13} />
+                  Open & Send in WhatsApp Now
+                </a>
+              </div>
+            )}
+
+            {directChannel === "SMS" && (
+              <div className="pt-2 border-t border-blue-200/80 dark:border-slate-800">
+                <a
+                  href={directReceipt.sms_url || smsUrl}
+                  className="w-full py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <MessageSquare size={13} />
+                  Open in Phone SMS App Now
+                </a>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -76,6 +76,7 @@ class ChannelDispatcherService:
         encoded_subj = urllib.parse.quote(subject or "Public Communication")
         encoded_body = urllib.parse.quote(body or "")
         mailto_url = f"mailto:{clean_to}?subject={encoded_subj}&body={encoded_body}"
+        gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={clean_to}&su={encoded_subj}&body={encoded_body}"
 
         smtp_host = os.environ.get("SMTP_HOST") or settings.SMTP_HOST or "smtp.gmail.com"
         smtp_port = int(os.environ.get("SMTP_PORT") or settings.SMTP_PORT or 587)
@@ -130,7 +131,8 @@ class ChannelDispatcherService:
                             "status": "DELIVERED",
                             "provider": "Resend Cloud HTTP API",
                             "details": f"Live email successfully transmitted to {clean_to} via Resend Cloud API (ID: {sid})",
-                            "mailto_url": mailto_url
+                            "mailto_url": mailto_url,
+                            "gmail_url": gmail_url
                         }
                     else:
                         gateway_notices.append(f"Resend HTTP [{resp.status_code}]: {resp.text}")
@@ -164,7 +166,8 @@ class ChannelDispatcherService:
                             "status": "DELIVERED",
                             "provider": "Brevo Cloud HTTP API",
                             "details": f"Live email successfully transmitted to {clean_to} via Brevo Cloud API",
-                            "mailto_url": mailto_url
+                            "mailto_url": mailto_url,
+                            "gmail_url": gmail_url
                         }
                     else:
                         gateway_notices.append(f"Brevo HTTP [{resp.status_code}]: {resp.text}")
@@ -173,7 +176,7 @@ class ChannelDispatcherService:
 
         # 3. Attempt Live SMTP (e.g. Gmail App Password)
         if smtp_user and smtp_pass:
-            clean_pass = smtp_pass.strip()
+            clean_pass = smtp_pass.strip().replace(" ", "")
             # Try configured port first, then attempt alternate port (587 vs 465) if blocked
             ports_to_try = [smtp_port]
             if smtp_port == 587 and 465 not in ports_to_try:
@@ -214,20 +217,20 @@ class ChannelDispatcherService:
                         "status": "DELIVERED",
                         "provider": f"Gmail / SMTP ({smtp_host}:{port})",
                         "details": f"Live email successfully transmitted to {clean_to} via {smtp_host}:{port}",
-                        "mailto_url": mailto_url
+                        "mailto_url": mailto_url,
+                        "gmail_url": gmail_url
                     }
                 except Exception as e:
                     gateway_notices.append(f"SMTP ({port}): {str(e)}")
 
-        # 4. Graceful Fallback (Simulation / Draft with Mailto Link)
-        # Prevents uncaught 500 error on cloud hosts (like Render Free tier) where outbound SMTP is blocked
+        # 4. Graceful Fallback (Simulation / Draft with Mailto & Gmail Web Links)
+        # Prevents uncaught 500 error on cloud hosts (like Render Free tier) where outbound raw SMTP is blocked
         reasons = " | ".join(gateway_notices) if gateway_notices else ""
         if smtp_user and smtp_pass:
             details_msg = (
                 f"Notice: Outbound SMTP connection blocked or timed out ({reasons or 'Connection timed out'}). "
                 "Cloud platforms (such as Render Free tier) block outbound SMTP ports 25, 465, and 587. "
-                "The email draft was prepared. Click 'Open in Default Email App' below to send directly via Gmail/Outlook, "
-                "or configure an HTTP API key (RESEND_API_KEY) in backend/.env."
+                "The email draft was prepared. Click 'Open & Send in Gmail (Web)' below to send directly via Gmail in 1 click."
             )
         else:
             details_msg = (
@@ -243,7 +246,8 @@ class ChannelDispatcherService:
             "status": "SIMULATED",
             "provider": f"Gmail / SMTP Gateway ({smtp_host})",
             "details": details_msg,
-            "mailto_url": mailto_url
+            "mailto_url": mailto_url,
+            "gmail_url": gmail_url
         }
 
     @classmethod

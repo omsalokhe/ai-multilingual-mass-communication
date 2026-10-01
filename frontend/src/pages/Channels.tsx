@@ -595,15 +595,26 @@ export default function Channels() {
                     </div>
                   )}
 
-                  {targetChannel === "EMAIL" && lastReceipt.mailto_url && (
-                    <div className="pt-2 border-t border-slate-200/60 flex flex-col gap-1.5">
+                  {targetChannel === "EMAIL" && (
+                    <div className="pt-2 border-t border-slate-200/60 flex flex-col sm:flex-row gap-2">
                       <a
-                        href={lastReceipt.mailto_url}
-                        className="inline-flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all shadow-xs cursor-pointer"
+                        href={lastReceipt.gmail_url || `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient.trim())}&su=${encodeURIComponent(subject.trim() || "Official Public Communication Alert")}&body=${encodeURIComponent(message.trim())}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition-all shadow-xs cursor-pointer"
                       >
                         <ExternalLink size={13} />
-                        Open in Default Email App
+                        Open & Send in Gmail (Web)
                       </a>
+                      {lastReceipt.mailto_url && (
+                        <a
+                          href={lastReceipt.mailto_url}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all shadow-xs cursor-pointer"
+                        >
+                          <Mail size={13} />
+                          Open in Desktop App
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>

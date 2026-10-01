@@ -11,6 +11,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     // Nav & Common
     nav_dashboard: "Dashboard",
     nav_crisis_monitor: "Crisis & Weather",
+    nav_approvals: "Approvals",
     nav_campaigns: "Campaigns",
     nav_audience: "Audience",
     nav_templates: "Content & Templates",
@@ -107,6 +108,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
   Hindi: {
     // Nav & Common
     nav_dashboard: "डैशबोर्ड",
+    nav_approvals: "स्वीकृति",
     nav_campaigns: "अभियान",
     nav_audience: "दर्शक / ऑडियंस",
     nav_templates: "सामग्री और टेम्पलेट्स",
@@ -203,6 +205,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
   Marathi: {
     // Nav & Common
     nav_dashboard: "डॅशबोर्ड",
+    nav_approvals: "मंजुरी",
     nav_campaigns: "मोहिमा",
     nav_audience: "नागरिक प्रेक्षक",
     nav_templates: "सामग्री व टेम्पलेट्स",
@@ -299,6 +302,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
   Kannada: {
     // Nav & Common
     nav_dashboard: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    nav_approvals: "ಅನುಮೋದನೆಗಳು",
     nav_campaigns: "ಅಭಿಯಾನಗಳು",
     nav_audience: "ಪ್ರೇಕ್ಷಕರು",
     nav_templates: "ವಿಷಯ ಮತ್ತು ಟೆಂಪ್ಲೇಟ್‌ಗಳು",
@@ -395,6 +399,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
   Tamil: {
     // Nav & Common
     nav_dashboard: "டாஷ்போர்டு",
+    nav_approvals: "ஒப்புதல்கள்",
     nav_campaigns: "பிரச்சாரங்கள்",
     nav_audience: "பார்வையாளர்கள்",
     nav_templates: "உள்ளடக்கம் & வார்ப்புருக்கள்",
@@ -491,6 +496,7 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
   Telugu: {
     // Nav & Common
     nav_dashboard: "డాష్‌బోర్డ్",
+    nav_approvals: "ఆమోదాలు",
     nav_campaigns: "ప్రచారాలు",
     nav_audience: "ప్రేక్షకులు",
     nav_templates: "కంటెంట్ & టెంప్లేట్‌లు",

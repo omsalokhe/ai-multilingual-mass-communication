@@ -138,7 +138,7 @@ export default function Sidebar() {
                   ? isDark ? "text-blue-400" : "text-blue-600"
                   : isDark ? "text-slate-500" : "text-slate-400"
               } />
-              {t(item.key) || item.fallback}
+              {t(item.key) && t(item.key) !== item.key ? t(item.key) : item.fallback}
             </NavLink>
           ))}
         </nav>

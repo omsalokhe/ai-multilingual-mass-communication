@@ -400,6 +400,7 @@ export interface SendTestResponse {
   whatsapp_url?: string;
   sms_url?: string;
   mailto_url?: string;
+  gmail_url?: string;
 }
 
 export interface DispatchCampaignRequest {
