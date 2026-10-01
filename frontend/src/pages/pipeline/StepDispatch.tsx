@@ -19,12 +19,21 @@ import {
   Check,
   ChevronRight,
   Info,
+  XCircle,
 } from "lucide-react";
-import { dispatchCampaign, getCampaign, sendTestMessage } from "../../lib/api";
+import {
+  dispatchCampaign,
+  getCampaign,
+  sendTestMessage,
+  submitForApproval,
+  approveCampaign,
+  rejectCampaign,
+} from "../../lib/api";
 import type { CampaignDetail, DispatchCampaignResponse, SendTestResponse } from "../../types";
 import { useToast } from "../../components/Toast";
 import StatusBadge from "../../components/StatusBadge";
 import { useAppSettings } from "../../context/AppSettingsContext";
+import { useAuth } from "../../context/AuthContext";
 
 interface Props {
   campaignId: number;
@@ -74,6 +83,57 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
   ]);
   const [massDispatching, setMassDispatching] = useState(false);
   const [massResult, setMassResult] = useState<DispatchCampaignResponse | null>(null);
+
+  // Role & Approval workflow state
+  const { isAdmin, isCampaignManager } = useAuth();
+  const [approvalActionLoading, setApprovalActionLoading] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  const handleSubmitApproval = async () => {
+    setApprovalActionLoading(true);
+    try {
+      await submitForApproval(campaignId);
+      toast("success", "Campaign submitted for Administrator approval!");
+      await fetchData();
+    } catch (err: any) {
+      toast("error", err.response?.data?.detail || "Failed to submit for approval");
+    } finally {
+      setApprovalActionLoading(false);
+    }
+  };
+
+  const handleAdminApprove = async () => {
+    setApprovalActionLoading(true);
+    try {
+      await approveCampaign(campaignId);
+      toast("success", "Campaign approved! It is now authorized for dispatch.");
+      await fetchData();
+    } catch (err: any) {
+      toast("error", err.response?.data?.detail || "Failed to approve campaign");
+    } finally {
+      setApprovalActionLoading(false);
+    }
+  };
+
+  const handleAdminReject = async () => {
+    if (!rejectionReason.trim()) {
+      toast("error", "Please provide a valid rejection reason.");
+      return;
+    }
+    setApprovalActionLoading(true);
+    try {
+      await rejectCampaign(campaignId, rejectionReason.trim());
+      toast("success", "Campaign rejected. Notes returned to Campaign Manager.");
+      setRejectModalOpen(false);
+      setRejectionReason("");
+      await fetchData();
+    } catch (err: any) {
+      toast("error", err.response?.data?.detail || "Failed to reject campaign");
+    } finally {
+      setApprovalActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -213,6 +273,14 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
       return;
     }
 
+    if (!isAdmin) {
+      toast(
+        "error",
+        "Permission Denied: Only Administrators can authorize and dispatch mass campaigns. Please submit for approval."
+      );
+      return;
+    }
+
     setMassDispatching(true);
     try {
       const res = await dispatchCampaign({
@@ -227,6 +295,10 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
       );
       onComplete();
     } catch (err: any) {
+      if (err.response?.status === 403 || err.response?.status === 400) {
+        toast("error", err.response?.data?.detail || "Dispatch blocked by policy.");
+        return;
+      }
       const channelStats: Record<string, { sent: number; failed: number }> = {};
       selectedMassChannels.forEach((ch) => {
         channelStats[ch] = { sent: 5, failed: 0 };
@@ -774,30 +846,134 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
           })}
         </div>
 
-        {/* Mass Broadcast Action Button */}
-        {!massResult ? (
-          <div className="pt-2">
-            <button
-              onClick={handleMassDispatch}
-              disabled={massDispatching || selectedMassChannels.length === 0}
-              className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {massDispatching ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Executing Mass Communication Dispatch...
-                </>
-              ) : (
-                <>
-                  <Send size={16} />
-                  Execute Multilingual Mass Broadcast ({selectedMassChannels.join(", ")})
-                </>
-              )}
-            </button>
-            <p className="text-center text-[11px] text-slate-400 mt-2">
-              Dispatches simultaneously to all registered audience segment recipients with delivery
-              receipt logging.
+        {/* Rejection Alert Banner */}
+        {campaign?.status === "REJECTED" && (
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 space-y-1">
+            <div className="flex items-center gap-2 text-xs font-bold text-rose-400">
+              <XCircle size={16} />
+              <span>Campaign Needs Revision (Admin Rejection)</span>
+            </div>
+            <p className="text-xs text-rose-200/90 pl-6">
+              <strong>Admin Note:</strong> {campaign.rejection_reason || "Please revise the message content or target segments before re-submitting."}
             </p>
+          </div>
+        )}
+
+        {/* Mass Broadcast & Role-Based Approval Section */}
+        {!massResult ? (
+          <div className="pt-2 space-y-3">
+            {/* If NOT Admin: Campaign Manager flow */}
+            {!isAdmin ? (
+              <div className="space-y-3">
+                {campaign?.status === "PENDING_APPROVAL" ? (
+                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
+                      <Clock size={16} />
+                      <span>Campaign Submitted & Awaiting Administrator Approval</span>
+                    </div>
+                    <p className="text-xs text-amber-200/80 pl-6">
+                      Your campaign is currently in the Administrator review queue. Only an Administrator can authorize and execute the final multichannel broadcast.
+                    </p>
+                  </div>
+                ) : campaign?.status === "APPROVED" ? (
+                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+                      <CheckCircle2 size={16} />
+                      <span>Campaign Approved by Administrator</span>
+                    </div>
+                    <p className="text-xs text-emerald-200/80 pl-6">
+                      This campaign is approved and ready for dispatch. Final broadcasting will be triggered by an Administrator.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      onClick={handleSubmitApproval}
+                      disabled={approvalActionLoading}
+                      className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {approvalActionLoading ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          Submitting to Administrator...
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck size={16} />
+                          Submit Campaign for Administrator Final Sign-Off & Approval
+                        </>
+                      )}
+                    </button>
+                    <p className="text-center text-[11px] text-slate-400 mt-2">
+                      Campaign Managers submit drafts to Administrators for review. Once approved, the Administrator executes final broadcast.
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* If Admin: Direct Approval & Dispatch Controls */
+              <div className="space-y-3">
+                {campaign?.status === "PENDING_APPROVAL" && (
+                  <div className="p-4 rounded-xl bg-slate-800 border border-amber-500/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                        <Clock size={16} />
+                        <span>Administrator Review Required</span>
+                      </div>
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 font-semibold">
+                        AWAITING SIGN-OFF
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      A Campaign Manager has submitted this campaign for your review. Please examine the message content and target segments above before making an approval decision.
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => setRejectModalOpen(true)}
+                        disabled={approvalActionLoading}
+                        className="px-4 py-2 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-semibold text-xs transition disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        <XCircle size={14} />
+                        Reject with Feedback
+                      </button>
+                      <button
+                        onClick={handleAdminApprove}
+                        disabled={approvalActionLoading}
+                        className="flex-1 py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      >
+                        {approvalActionLoading ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <CheckCircle2 size={14} />
+                        )}
+                        Approve Campaign
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleMassDispatch}
+                  disabled={massDispatching || selectedMassChannels.length === 0}
+                  className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {massDispatching ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Executing Mass Communication Dispatch...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} />
+                      Authorize & Execute Multilingual Mass Broadcast ({selectedMassChannels.join(", ")})
+                    </>
+                  )}
+                </button>
+                <p className="text-center text-[11px] text-slate-400 mt-1">
+                  Administrator authorization: broadcasts simultaneously to all registered audience recipients.
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           /* Delivery Execution Report */
@@ -954,6 +1130,58 @@ export default function StepDispatch({ campaignId, onComplete }: Props) {
           </div>
         )}
       </div>
+
+      {/* Admin Rejection Modal Dialog */}
+      {rejectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <span className="p-2 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400">
+                <XCircle size={22} />
+              </span>
+              <div>
+                <h3 className="text-base font-bold text-white">Reject Campaign</h3>
+                <p className="text-xs text-slate-400">Specify why this campaign needs revision by the Manager.</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                Rejection Reason / Guidance for Campaign Manager <span className="text-rose-400">*</span>
+              </label>
+              <textarea
+                rows={4}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="e.g. Please update the warning instructions in Tamil and verify that emergency contact numbers are included."
+                className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setRejectModalOpen(false)}
+                disabled={approvalActionLoading}
+                className="px-4 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAdminReject}
+                disabled={approvalActionLoading || !rejectionReason.trim()}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 shadow-md transition flex items-center gap-1.5"
+              >
+                {approvalActionLoading ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <XCircle size={13} />
+                )}
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

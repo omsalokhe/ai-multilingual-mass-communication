@@ -7,19 +7,26 @@ export interface CampaignBrief {
   campaign_code: string;
   name: string;
   objective: string;
+  description?: string;
   priority: string;
   status: string;
   campaign_type: string;
   target_audiences: string[];
+  rejection_reason?: string | null;
+  approved_by?: number | null;
+  approved_at?: string | null;
 }
 
 export interface CampaignContent {
   id: number;
   language_id: number;
   language: string;
+  language_code?: string;
   channel: string;
   subject: string;
   body: string;
+  content_text?: string;
+  sentiment_score?: number;
   ai_generated: boolean;
   version: number;
   status: string;
@@ -37,6 +44,11 @@ export interface CampaignDetail {
   status: string;
   target_audiences: string[];
   contents: CampaignContent[];
+  audiences?: Array<{ id: number; name: string }>;
+  created_at?: string;
+  approved_by?: number | null;
+  approved_at?: string | null;
+  rejection_reason?: string | null;
 }
 
 // ──────────────────────────────────────────────

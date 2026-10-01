@@ -51,9 +51,15 @@ class Campaign(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Approval workflow fields
+    approved_by = Column(BigInteger, ForeignKey("admins.id"), nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+
     campaign_type = relationship("CampaignType", back_populates="campaigns")
     audiences = relationship("CampaignAudience", back_populates="campaign", cascade="all, delete-orphan")
     contents = relationship("CampaignContent", back_populates="campaign", cascade="all, delete-orphan")
+    approver = relationship("Admin", foreign_keys=[approved_by])
 
 
 class CampaignAudience(Base):

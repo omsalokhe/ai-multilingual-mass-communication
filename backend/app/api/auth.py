@@ -28,9 +28,10 @@ def ensure_default_roles(db: Session):
     """Ensure standard roles exist in database."""
     default_roles = [
         ("SUPER_ADMIN", "Full system administrator access"),
-        ("ADMIN", "Standard administrator"),
+        ("ADMIN", "Standard administrator — can approve, reject, and dispatch campaigns"),
         ("CAMPAIGN_MANAGER", "Can create and manage communication campaigns"),
         ("COMMUNICATION_TEAM", "Can draft and review multilingual content"),
+        ("USER", "Read-only access to view dispatched campaigns"),
     ]
     for role_name, description in default_roles:
         existing = db.query(Role).filter(Role.role_name == role_name).first()

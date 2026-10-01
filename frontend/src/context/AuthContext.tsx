@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 import type { AuthUser, LoginPayload, RegisterPayload } from "../types";
 import { loginUser, registerUser, getCurrentUser, logoutUser } from "../lib/api";
 
@@ -7,6 +7,9 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isAdmin: boolean;
+  isCampaignManager: boolean;
+  isUser: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
@@ -72,6 +75,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  // Role helpers
+  const roleUpper = useMemo(() => (user?.role || "").toUpperCase(), [user]);
+  const isAdmin = roleUpper === "ADMIN" || roleUpper === "SUPER_ADMIN";
+  const isCampaignManager = roleUpper === "CAMPAIGN_MANAGER";
+  const isUser = roleUpper === "USER";
+
   return (
     <AuthContext.Provider
       value={{
@@ -79,6 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isLoading,
         isAuthenticated: !!token && !!user,
+        isAdmin,
+        isCampaignManager,
+        isUser,
         login,
         register,
         logout,
@@ -96,3 +108,4 @@ export function useAuth(): AuthContextType {
   }
   return context;
 }
+

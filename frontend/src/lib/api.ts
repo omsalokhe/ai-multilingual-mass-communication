@@ -93,6 +93,8 @@ export async function getCampaign(id: number): Promise<CampaignDetail> {
   return data;
 }
 
+export const getCampaignDetails = getCampaign;
+
 export async function createCampaign(
   body: CreateCampaignRequest
 ): Promise<CreateCampaignResponse> {
@@ -740,6 +742,40 @@ export async function logoutUser(): Promise<{ success: boolean }> {
   } catch {
     return { success: true };
   }
+}
+
+// ── Campaign Approval Workflow ──────────────────
+export async function submitForApproval(campaignId: number): Promise<{ success: boolean; status: string; message: string }> {
+  const { data } = await client.post(`/campaigns/${campaignId}/submit-for-approval`);
+  return data;
+}
+
+export async function approveCampaign(campaignId: number): Promise<{ success: boolean; status: string; message: string; approved_by: string }> {
+  const { data } = await client.post(`/campaigns/${campaignId}/approve`);
+  return data;
+}
+
+export async function rejectCampaign(campaignId: number, reason: string): Promise<{ success: boolean; status: string; message: string }> {
+  const { data } = await client.post(`/campaigns/${campaignId}/reject`, { reason });
+  return data;
+}
+
+export interface PendingApprovalItem {
+  id: number;
+  campaign_code: string;
+  name: string;
+  description: string | null;
+  priority: string;
+  status: string;
+  campaign_type: string;
+  created_by_name: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export async function getPendingApprovals(): Promise<PendingApprovalItem[]> {
+  const { data } = await client.get<PendingApprovalItem[]>("/campaigns/pending-approvals");
+  return data;
 }
 
 // ── Crisis & Weather Monitor ──────────────────

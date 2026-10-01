@@ -86,3 +86,20 @@ def get_current_admin(
         )
 
     return admin
+
+
+def require_role(*allowed_roles: str):
+    """
+    FastAPI dependency factory that restricts endpoint access to specific roles.
+    Usage:  admin_only = Depends(require_role("ADMIN", "SUPER_ADMIN"))
+    """
+    def role_checker(current_user: Admin = Depends(get_current_admin)) -> Admin:
+        role_name = current_user.role.role_name if current_user.role else ""
+        if role_name not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied. Required role(s): {', '.join(allowed_roles)}. Your role: {role_name}.",
+            )
+        return current_user
+    return role_checker
+

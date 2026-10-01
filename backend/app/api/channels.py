@@ -5,6 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.services.channel_dispatcher import ChannelDispatcherService
+from app.services.security import get_current_admin, require_role
+from app.models.admin import Admin
+from app.models.campaign import Campaign
 
 import logging
 
@@ -71,12 +74,27 @@ def send_test_message(req: SendTestRequest, db: Session = Depends(get_db)):
 
 @router.post(
     "/dispatch-campaign",
-    summary="Dispatch campaign across Email, SMS, and WhatsApp",
-    description="Transmits the generated campaign content across the selected channels to all targeted recipients."
+    summary="Dispatch campaign across Email, SMS, and WhatsApp (Admin only)",
+    description="Admin-only endpoint. Transmits the generated campaign content across the selected channels. Campaign must be in APPROVED status."
 )
-def dispatch_campaign(req: DispatchCampaignRequest, db: Session = Depends(get_db)):
+def dispatch_campaign(
+    req: DispatchCampaignRequest,
+    db: Session = Depends(get_db),
+    current_user: Admin = Depends(require_role("ADMIN", "SUPER_ADMIN")),
+):
+    # Verify campaign exists and is approved
+    campaign = db.query(Campaign).filter(Campaign.id == req.campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    if campaign.status != "APPROVED":
+        raise HTTPException(
+            status_code=403,
+            detail=f"Campaign cannot be dispatched. Current status: '{campaign.status}'. Only APPROVED campaigns can be dispatched."
+        )
+
     try:
-        return ChannelDispatcherService.dispatch_campaign(
+        result = ChannelDispatcherService.dispatch_campaign(
             db=db,
             campaign_id=req.campaign_id,
             channels=req.channels,
@@ -84,6 +102,13 @@ def dispatch_campaign(req: DispatchCampaignRequest, db: Session = Depends(get_db
             custom_message=req.custom_message,
             recipient_ids=req.recipient_ids
         )
+
+        # Update campaign status to DISPATCHED
+        campaign.status = "DISPATCHED"
+        campaign.updated_at = __import__("datetime").datetime.utcnow()
+        db.commit()
+
+        return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

@@ -15,7 +15,7 @@ from app.models.recipient import (
     CommunicationTemplate
 )
 from app.models.admin import Role, Admin
-from app.services.security import hash_password
+from app.services.security import hash_password, get_current_admin, require_role
 from app.schemas.campaign import (
     GenerateContentRequest,
     GenerateContentResponse,
@@ -507,3 +507,161 @@ def seed_sample_data(db: Session = Depends(get_db)):
 
     db.commit()
     return {"message": "Sample master data, audiences, recipients, templates, and campaign successfully seeded", "campaign_id": 1}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Campaign Approval Workflow
+# ══════════════════════════════════════════════════════════════════════
+
+class RejectCampaignRequest(BaseModel):
+    reason: str = Field(..., min_length=5, max_length=1000, description="Reason for rejecting the campaign")
+
+
+@router.post(
+    "/{id}/submit-for-approval",
+    summary="Submit campaign for admin approval",
+    description="Campaign Manager submits a DRAFT or REJECTED campaign for admin review. Status changes to PENDING_APPROVAL."
+)
+def submit_for_approval(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Admin = Depends(get_current_admin),
+):
+    campaign = db.query(Campaign).filter(Campaign.id == id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    if campaign.status not in ("DRAFT", "REJECTED"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot submit campaign with status '{campaign.status}'. Only DRAFT or REJECTED campaigns can be submitted."
+        )
+
+    campaign.status = "PENDING_APPROVAL"
+    campaign.rejection_reason = None  # Clear old rejection reason
+    campaign.updated_at = __import__("datetime").datetime.utcnow()
+    db.commit()
+    db.refresh(campaign)
+
+    return {
+        "success": True,
+        "campaign_id": campaign.id,
+        "status": campaign.status,
+        "message": f"Campaign '{campaign.name}' submitted for admin approval."
+    }
+
+
+@router.post(
+    "/{id}/approve",
+    summary="Approve a pending campaign (Admin only)",
+    description="Admin approves a PENDING_APPROVAL campaign, changing its status to APPROVED and unlocking dispatch."
+)
+def approve_campaign(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Admin = Depends(require_role("ADMIN", "SUPER_ADMIN")),
+):
+    campaign = db.query(Campaign).filter(Campaign.id == id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    if campaign.status != "PENDING_APPROVAL":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot approve campaign with status '{campaign.status}'. Only PENDING_APPROVAL campaigns can be approved."
+        )
+
+    now = __import__("datetime").datetime.utcnow()
+    campaign.status = "APPROVED"
+    campaign.approved_by = current_user.id
+    campaign.approved_at = now
+    campaign.rejection_reason = None
+    campaign.updated_at = now
+    db.commit()
+    db.refresh(campaign)
+
+    approver_name = current_user.full_name
+    return {
+        "success": True,
+        "campaign_id": campaign.id,
+        "status": campaign.status,
+        "approved_by": approver_name,
+        "approved_at": str(campaign.approved_at),
+        "message": f"Campaign '{campaign.name}' approved by {approver_name}."
+    }
+
+
+@router.post(
+    "/{id}/reject",
+    summary="Reject a pending campaign (Admin only)",
+    description="Admin rejects a PENDING_APPROVAL campaign with a reason. Campaign Manager can then revise and re-submit."
+)
+def reject_campaign(
+    id: int,
+    request: RejectCampaignRequest,
+    db: Session = Depends(get_db),
+    current_user: Admin = Depends(require_role("ADMIN", "SUPER_ADMIN")),
+):
+    campaign = db.query(Campaign).filter(Campaign.id == id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    if campaign.status != "PENDING_APPROVAL":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot reject campaign with status '{campaign.status}'. Only PENDING_APPROVAL campaigns can be rejected."
+        )
+
+    now = __import__("datetime").datetime.utcnow()
+    campaign.status = "REJECTED"
+    campaign.rejection_reason = request.reason
+    campaign.approved_by = current_user.id
+    campaign.approved_at = now
+    campaign.updated_at = now
+    db.commit()
+    db.refresh(campaign)
+
+    return {
+        "success": True,
+        "campaign_id": campaign.id,
+        "status": campaign.status,
+        "rejection_reason": campaign.rejection_reason,
+        "message": f"Campaign '{campaign.name}' rejected. Reason: {request.reason}"
+    }
+
+
+@router.get(
+    "/pending-approvals",
+    summary="List campaigns pending admin approval",
+    description="Returns all campaigns with status PENDING_APPROVAL. Admin-only endpoint."
+)
+def list_pending_approvals(
+    db: Session = Depends(get_db),
+    current_user: Admin = Depends(require_role("ADMIN", "SUPER_ADMIN")),
+):
+    campaigns = (
+        db.query(Campaign)
+        .filter(Campaign.status == "PENDING_APPROVAL")
+        .order_by(Campaign.updated_at.desc())
+        .all()
+    )
+
+    results = []
+    for c in campaigns:
+        creator = db.query(Admin).filter(Admin.id == c.created_by).first()
+        camp_type = db.query(CampaignType).filter(CampaignType.id == c.campaign_type_id).first()
+        results.append({
+            "id": c.id,
+            "campaign_code": c.campaign_code,
+            "name": c.name,
+            "description": c.description,
+            "priority": c.priority,
+            "status": c.status,
+            "campaign_type": camp_type.name if camp_type else "Unknown",
+            "created_by_name": creator.full_name if creator else "Unknown",
+            "created_at": str(c.created_at) if c.created_at else None,
+            "updated_at": str(c.updated_at) if c.updated_at else None,
+        })
+
+    return results
+

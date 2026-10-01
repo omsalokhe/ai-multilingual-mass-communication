@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAppSettings } from "../context/AppSettingsContext";
 import {
@@ -15,18 +15,29 @@ import {
   X,
   Zap,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
-const NAV_ITEMS = [
+interface NavItem {
+  to: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  key: string;
+  fallback: string;
+  /** Which roles can see this item. undefined = everyone */
+  roles?: string[];
+}
+
+const NAV_ITEMS: NavItem[] = [
   { to: "/", icon: LayoutDashboard, key: "nav_dashboard", fallback: "Dashboard" },
-  { to: "/crisis-monitor", icon: CloudLightning, key: "nav_crisis_monitor", fallback: "Crisis & Weather" },
-  { to: "/campaigns", icon: Megaphone, key: "nav_campaigns", fallback: "Campaigns" },
-  { to: "/audience", icon: Users, key: "nav_audience", fallback: "Audience" },
-  { to: "/content-templates", icon: FileText, key: "nav_templates", fallback: "Content & Templates" },
-  { to: "/channels", icon: Radio, key: "nav_channels", fallback: "Channels" },
-  { to: "/analytics", icon: BarChart3, key: "nav_analytics", fallback: "Analytics" },
-  { to: "/reports", icon: ClipboardList, key: "nav_reports", fallback: "Reports" },
+  { to: "/crisis-monitor", icon: CloudLightning, key: "nav_crisis_monitor", fallback: "Crisis & Weather", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER", "COMMUNICATION_TEAM"] },
+  { to: "/approvals", icon: ShieldCheck, key: "nav_approvals", fallback: "Approvals", roles: ["ADMIN", "SUPER_ADMIN"] },
+  { to: "/campaigns", icon: Megaphone, key: "nav_campaigns", fallback: "Campaigns", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER", "COMMUNICATION_TEAM"] },
+  { to: "/audience", icon: Users, key: "nav_audience", fallback: "Audience", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },
+  { to: "/content-templates", icon: FileText, key: "nav_templates", fallback: "Content & Templates", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER", "COMMUNICATION_TEAM"] },
+  { to: "/channels", icon: Radio, key: "nav_channels", fallback: "Channels", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },
+  { to: "/analytics", icon: BarChart3, key: "nav_analytics", fallback: "Analytics", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },
+  { to: "/reports", icon: ClipboardList, key: "nav_reports", fallback: "Reports", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },
   { to: "/settings", icon: Settings, key: "nav_settings", fallback: "Settings" },
 ];
 
@@ -36,6 +47,16 @@ export default function Sidebar() {
   const { profile, t, generalSettings } = useAppSettings();
   const { user, logout } = useAuth();
   const isDark = generalSettings.darkMode;
+
+  const userRole = (user?.role || "").toUpperCase();
+
+  // Filter nav items based on user role
+  const visibleNavItems = useMemo(() => {
+    return NAV_ITEMS.filter((item) => {
+      if (!item.roles) return true; // visible to all
+      return item.roles.includes(userRole);
+    });
+  }, [userRole]);
 
   const isActive = (to: string) => {
     if (to === "/") return location.pathname === "/";
@@ -95,7 +116,7 @@ export default function Sidebar() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -153,3 +174,4 @@ export default function Sidebar() {
     </>
   );
 }
+

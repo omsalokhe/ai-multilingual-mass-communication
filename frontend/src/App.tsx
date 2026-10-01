@@ -19,6 +19,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import AIContentGenerator from "./pages/AIContentGenerator";
 import CrisisMonitor from "./pages/CrisisMonitor";
+import AdminApprovals from "./pages/AdminApprovals";
 
 function DashboardLayout() {
   const { generalSettings } = useAppSettings();
@@ -31,6 +32,7 @@ function DashboardLayout() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/crisis-monitor" element={<CrisisMonitor />} />
+          <Route path="/approvals" element={<AdminApprovals />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/campaigns/create" element={<CreateCampaign />} />
           <Route path="/campaigns/:id" element={<CampaignPipeline />} />
