@@ -503,23 +503,33 @@ export default function Dashboard() {
       <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
         {/* Admin Action Alert Banner if campaigns are pending */}
         {isAdmin && pendingCount > 0 && (
-          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-200 animate-fade-in shadow-sm">
+          <div
+            className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in shadow-sm ${
+              isDark
+                ? "bg-amber-500/10 border-amber-500/30 text-amber-200"
+                : "bg-amber-50 border-amber-300 text-black shadow-xs"
+            }`}
+          >
             <div className="flex items-center gap-3">
-              <span className="p-2 rounded-lg bg-amber-500/20 text-amber-400">
+              <span
+                className={`p-2 rounded-lg ${
+                  isDark ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-800"
+                }`}
+              >
                 <ShieldCheck size={20} />
               </span>
               <div>
-                <h4 className="text-sm font-bold text-amber-300">
+                <h4 className={`text-sm font-bold ${isDark ? "text-amber-300" : "text-black"}`}>
                   {pendingCount} Campaign{pendingCount > 1 ? "s" : ""} Awaiting Admin Approval & Dispatch
                 </h4>
-                <p className="text-xs text-amber-200/80">
+                <p className={`text-xs ${isDark ? "text-amber-200/80" : "text-black"}`}>
                   Campaign Managers have submitted new campaigns for your final review and multi-channel broadcast authorization.
                 </p>
               </div>
             </div>
             <button
               onClick={() => navigate("/approvals")}
-              className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition self-start sm:self-auto shrink-0 shadow-md"
+              className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition self-start sm:self-auto shrink-0 shadow-md cursor-pointer"
             >
               <span>Review in Approvals</span>
               <ArrowRight size={13} />
