@@ -30,11 +30,11 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/", icon: LayoutDashboard, key: "nav_dashboard", fallback: "Dashboard" },
-  { to: "/crisis-monitor", icon: CloudLightning, key: "nav_crisis_monitor", fallback: "Crisis & Weather", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER", "COMMUNICATION_TEAM"] },
+  { to: "/crisis-monitor", icon: CloudLightning, key: "nav_crisis_monitor", fallback: "Crisis & Weather", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },
   { to: "/approvals", icon: ShieldCheck, key: "nav_approvals", fallback: "Approvals", roles: ["ADMIN", "SUPER_ADMIN"] },
-  { to: "/campaigns", icon: Megaphone, key: "nav_campaigns", fallback: "Campaigns", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER", "COMMUNICATION_TEAM"] },
+  { to: "/campaigns", icon: Megaphone, key: "nav_campaigns", fallback: "Campaigns", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },
   { to: "/audience", icon: Users, key: "nav_audience", fallback: "Audience", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },
-  { to: "/content-templates", icon: FileText, key: "nav_templates", fallback: "Content & Templates", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER", "COMMUNICATION_TEAM"] },
+  { to: "/content-templates", icon: FileText, key: "nav_templates", fallback: "Content & Templates", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },
   { to: "/channels", icon: Radio, key: "nav_channels", fallback: "Channels", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },
   { to: "/analytics", icon: BarChart3, key: "nav_analytics", fallback: "Analytics", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },
   { to: "/reports", icon: ClipboardList, key: "nav_reports", fallback: "Reports", roles: ["ADMIN", "SUPER_ADMIN", "CAMPAIGN_MANAGER"] },

@@ -5,7 +5,7 @@ export interface UserProfile {
   fullName: string;
   email: string;
   phone: string;
-  organization: string;
+  organization?: string;
   role: string;
   avatarInitials: string;
 }
@@ -27,12 +27,11 @@ interface AppSettingsContextType {
 }
 
 const DEFAULT_PROFILE: UserProfile = {
-  fullName: "Om Sabitha",
-  email: "om.sabitha@masscomm.gov.in",
+  fullName: "User",
+  email: "user@connectai.gov.in",
   phone: "+91 9876543210",
-  organization: "PSG College of Engineering",
-  role: "Campaign Manager",
-  avatarInitials: "OS",
+  role: "USER",
+  avatarInitials: "US",
 };
 
 const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
@@ -42,7 +41,7 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
 };
 
 function computeInitials(name: string): string {
-  if (!name || !name.trim()) return "OS";
+  if (!name || !name.trim()) return "US";
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) {
     return parts[0].slice(0, 2).toUpperCase();
@@ -55,23 +54,59 @@ const AppSettingsContext = createContext<AppSettingsContextType | undefined>(und
 const PROFILE_STORAGE_KEY = "connectai_user_profile";
 const SETTINGS_STORAGE_KEY = "connectai_general_settings";
 
-export const AppSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    try {
-      const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
+function getInitialProfile(): UserProfile {
+  try {
+    const authUserStr = localStorage.getItem("mass_comm_user");
+    if (authUserStr) {
+      const authUser = JSON.parse(authUserStr);
+      if (authUser && authUser.full_name) {
         return {
-          ...DEFAULT_PROFILE,
-          ...parsed,
-          avatarInitials: computeInitials(parsed.fullName || DEFAULT_PROFILE.fullName),
+          fullName: authUser.full_name,
+          email: authUser.email || "",
+          phone: authUser.phone || "",
+          role: authUser.role || "USER",
+          avatarInitials: computeInitials(authUser.full_name),
         };
       }
-    } catch (e) {
-      console.error("Error reading profile from localStorage", e);
     }
-    return DEFAULT_PROFILE;
-  });
+    const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        ...DEFAULT_PROFILE,
+        ...parsed,
+        avatarInitials: computeInitials(parsed.fullName || DEFAULT_PROFILE.fullName),
+      };
+    }
+  } catch (e) {
+    console.error("Error reading profile from localStorage", e);
+  }
+  return DEFAULT_PROFILE;
+}
+
+export const AppSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [profile, setProfile] = useState<UserProfile>(getInitialProfile);
+
+  useEffect(() => {
+    try {
+      const authUserStr = localStorage.getItem("mass_comm_user");
+      if (authUserStr) {
+        const authUser = JSON.parse(authUserStr);
+        if (authUser && authUser.full_name) {
+          setProfile((prev) => ({
+            ...prev,
+            fullName: authUser.full_name,
+            email: authUser.email || prev.email,
+            phone: authUser.phone || prev.phone,
+            role: authUser.role || prev.role,
+            avatarInitials: computeInitials(authUser.full_name),
+          }));
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>(() => {
     try {

@@ -222,7 +222,6 @@ export default function Login() {
                     <option value="ADMIN" className="bg-slate-900 text-white">Administrator (Approve & Dispatch)</option>
                     <option value="CAMPAIGN_MANAGER" className="bg-slate-900 text-white">Campaign Manager (Create & Edit)</option>
                     <option value="USER" className="bg-slate-900 text-white">User (View Only)</option>
-                    <option value="COMMUNICATION_TEAM" className="bg-slate-900 text-white">Communication Team</option>
                   </select>
                 </div>
               </>

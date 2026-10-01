@@ -3,6 +3,7 @@ import { User, Shield, Bell, Globe, Link as LinkIcon, Save, Camera, CheckCircle2
 import TopBar from "../components/TopBar";
 import { useAppSettings } from "../context/AppSettingsContext";
 import { useToast } from "../components/Toast";
+import { useAuth } from "../context/AuthContext";
 
 const SETTINGS_TABS = [
   { label: "Profile", icon: User },
@@ -13,39 +14,86 @@ const SETTINGS_TABS = [
   { label: "Connected Channels", icon: LinkIcon },
 ];
 
+function formatRole(r?: string) {
+  const role = (r || "").toUpperCase();
+  if (role === "ADMIN" || role === "SUPER_ADMIN") return "Administrator";
+  if (role === "CAMPAIGN_MANAGER") return "Campaign Manager";
+  if (role === "USER") return "User (Citizen)";
+  return r || "User";
+}
+
 export default function Settings() {
   const { profile, generalSettings, updateProfile, updateDefaultLanguage, updateTimezone, toggleDarkMode } = useAppSettings();
+  const { user } = useAuth();
   const { toast } = useToast();
   const isDark = generalSettings.darkMode;
 
+  const effectiveName = user?.full_name || profile.fullName || "User";
+  const effectiveEmail = user?.email || profile.email || "";
+  const effectivePhone = user?.phone || profile.phone || "";
+  const effectiveRole = formatRole(user?.role || profile.role);
+
   const [activeTab, setActiveTab] = useState("Profile");
-  const [fullName, setFullName] = useState(profile.fullName);
-  const [email, setEmail] = useState(profile.email);
-  const [phone, setPhone] = useState(profile.phone);
-  const [organization, setOrganization] = useState(profile.organization);
-  const [role, setRole] = useState(profile.role);
+  const [fullName, setFullName] = useState(effectiveName);
+  const [email, setEmail] = useState(effectiveEmail);
+  const [phone, setPhone] = useState(effectivePhone);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setFullName(profile.fullName);
-    setEmail(profile.email);
-    setPhone(profile.phone);
-    setOrganization(profile.organization);
-    setRole(profile.role);
-  }, [profile]);
+    if (user) {
+      setFullName(user.full_name || "");
+      setEmail(user.email || "");
+      setPhone(user.phone || "");
+    } else {
+      setFullName(profile.fullName);
+      setEmail(profile.email);
+      setPhone(profile.phone);
+    }
+  }, [user, profile]);
 
   const handleSave = () => {
+    const updatedName = fullName.trim() || effectiveName;
+    const updatedEmail = email.trim();
+    const updatedPhone = phone.trim();
+
     updateProfile({
-      fullName: fullName.trim() || profile.fullName,
-      email: email.trim(),
-      phone: phone.trim(),
-      organization: organization.trim(),
-      role: role.trim(),
+      fullName: updatedName,
+      email: updatedEmail,
+      phone: updatedPhone,
+      role: user?.role || profile.role,
     });
+
+    // Synchronize localStorage mass_comm_user so TopBar and Sidebar update immediately
+    try {
+      const stored = localStorage.getItem("mass_comm_user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        parsed.full_name = updatedName;
+        parsed.email = updatedEmail;
+        parsed.phone = updatedPhone;
+        localStorage.setItem("mass_comm_user", JSON.stringify(parsed));
+      }
+    } catch (e) {
+      console.warn("Could not sync mass_comm_user in localStorage:", e);
+    }
+
     setSaved(true);
     toast("success", "Profile updated successfully! Changes reflected across the platform.");
     setTimeout(() => setSaved(false), 2500);
   };
+
+  // Compute initials directly from current active name
+  const avatarInitials = (user?.full_name || fullName || profile.fullName || "US")
+    .trim()
+    .split(/\s+/)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  const userRoleKey = (user?.role || profile.role || "").toUpperCase();
+  const isUserAdmin = userRoleKey === "ADMIN" || userRoleKey === "SUPER_ADMIN";
+  const isUserManager = userRoleKey === "CAMPAIGN_MANAGER";
 
   // Reusable class helpers
   const cardBg = isDark ? "bg-slate-800/80 border-slate-700" : "bg-white border-slate-200";
@@ -103,11 +151,11 @@ export default function Settings() {
               <div className={`rounded-xl border p-6 animate-fade-in ${cardBg}`}>
                 <h2 className={`text-sm font-bold mb-6 ${headingText}`}>Profile Information</h2>
 
-                {/* Avatar */}
+                {/* Avatar & User Meta */}
                 <div className={`flex items-center gap-4 mb-6 pb-6 border-b ${isDark ? "border-slate-700/60" : "border-slate-100"}`}>
                   <div className="relative">
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-md">
-                      {profile.avatarInitials}
+                      {avatarInitials}
                     </div>
                     <button className={`absolute bottom-0 right-0 w-7 h-7 rounded-full border flex items-center justify-center shadow-sm transition-colors ${
                       isDark
@@ -118,19 +166,27 @@ export default function Settings() {
                     </button>
                   </div>
                   <div>
-                    <h3 className={`text-base font-bold ${headingText}`}>{profile.fullName}</h3>
-                    <p className={`text-xs ${subText}`}>{profile.role}</p>
-                    <span className={`inline-flex items-center gap-1 mt-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${
-                      isDark
-                        ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
-                        : "text-emerald-600 bg-emerald-50 border-emerald-100"
+                    <h3 className={`text-base font-bold ${headingText}`}>{fullName || effectiveName}</h3>
+                    <p className={`text-xs ${subText}`}>{effectiveRole}</p>
+                    <span className={`inline-flex items-center gap-1 mt-1 text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${
+                      isUserAdmin
+                        ? isDark
+                          ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                          : "text-emerald-600 bg-emerald-50 border-emerald-100"
+                        : isUserManager
+                        ? isDark
+                          ? "text-blue-400 bg-blue-500/10 border-blue-500/20"
+                          : "text-blue-600 bg-blue-50 border-blue-100"
+                        : isDark
+                          ? "text-indigo-400 bg-indigo-500/10 border-indigo-500/20"
+                          : "text-indigo-600 bg-indigo-50 border-indigo-100"
                     }`}>
-                      <CheckCircle2 size={11} /> Active Administrator
+                      <CheckCircle2 size={11} /> {isUserAdmin ? "Active Administrator" : isUserManager ? "Active Campaign Manager" : "Active User"}
                     </span>
                   </div>
                 </div>
 
-                {/* Form */}
+                {/* Form without Organization */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>Full Name</label>
@@ -138,7 +194,7 @@ export default function Settings() {
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Om salokhe"
+                      placeholder="e.g. Yash"
                       className={`w-full px-3 py-2.5 rounded-lg border text-sm ${inputCls}`}
                     />
                   </div>
@@ -146,9 +202,9 @@ export default function Settings() {
                     <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>Role</label>
                     <input
                       type="text"
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                      className={`w-full px-3 py-2.5 rounded-lg border text-sm ${inputCls} ${isDark ? "" : "bg-slate-50"}`}
+                      disabled
+                      value={effectiveRole}
+                      className={`w-full px-3 py-2.5 rounded-lg border text-sm opacity-90 cursor-not-allowed ${inputCls} ${isDark ? "bg-slate-800" : "bg-slate-100"}`}
                     />
                   </div>
                   <div>
@@ -157,6 +213,7 @@ export default function Settings() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. user@connectai.gov.in"
                       className={`w-full px-3 py-2.5 rounded-lg border text-sm ${inputCls}`}
                     />
                   </div>
@@ -166,15 +223,7 @@ export default function Settings() {
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className={`w-full px-3 py-2.5 rounded-lg border text-sm ${inputCls}`}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className={`text-xs font-medium mb-1.5 block ${labelText}`}>Organization</label>
-                    <input
-                      type="text"
-                      value={organization}
-                      onChange={(e) => setOrganization(e.target.value)}
+                      placeholder="+91 9876543210"
                       className={`w-full px-3 py-2.5 rounded-lg border text-sm ${inputCls}`}
                     />
                   </div>
